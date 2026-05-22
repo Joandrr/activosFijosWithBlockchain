@@ -4,7 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:solidity": "hardhat test solidity",
+    "test:mocha": "hardhat test mocha",
+    "deploy": "hardhat ignition deploy ignition/modules/Counter.ts",
+    "deploy:sepolia": "hardhat ignition deploy --network sepolia ignition/modules/Counter.ts"
   },
   "keywords": [],
   "author": "",

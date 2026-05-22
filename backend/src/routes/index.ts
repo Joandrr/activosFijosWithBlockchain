@@ -1,0 +1,34 @@
+import { Router } from "express";
+import { authRouter } from "./auth.routes.js";
+import { marcaRouter } from "./marca.routes.js";
+import { tipoRouter } from "./tipo.routes.js";
+import { detalleTipoRouter } from "./detalle_tipo.routes.js";
+import { tipoLugarRouter } from "./tipo_lugar.routes.js";
+import { lugarRouter } from "./lugar.routes.js";
+import { activoRouter } from "./activo.routes.js";
+import { movimientoRouter } from "./movimiento.routes.js";
+import { estadoMovimientoRouter } from "./estado_movimiento.routes.js";
+import { estadoActivoRouter } from "./estado_activo.routes.js";
+import { detalleEstadoActivoRouter } from "./detalle_estado_activo.routes.js";
+import { usuarioRouter } from "./usuario.routes.js";
+import { rolRouter } from "./rol.routes.js";
+import { permisoRouter } from "./permiso.routes.js";
+import { responsableLugarRouter } from "./responsable_lugar.routes.js";
+
+export const router = Router();
+
+router.use("/auth", authRouter);
+router.use("/marcas", marcaRouter);
+router.use("/tipos", tipoRouter);
+router.use("/detalles-tipo", detalleTipoRouter);
+router.use("/tipos-lugar", tipoLugarRouter);
+router.use("/lugares", lugarRouter);
+router.use("/activos", activoRouter);
+router.use("/movimientos", movimientoRouter);
+router.use("/estados-movimiento", estadoMovimientoRouter);
+router.use("/estados-activo", estadoActivoRouter);
+router.use("/detalles-estado-activo", detalleEstadoActivoRouter);
+router.use("/usuarios", usuarioRouter);
+router.use("/roles", rolRouter);
+router.use("/permisos", permisoRouter);
+router.use("/responsables-lugar", responsableLugarRouter);
