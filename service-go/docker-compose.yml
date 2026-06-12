@@ -1,0 +1,18 @@
+services:
+
+  service-go:
+    build: .
+    container_name: service-go
+    ports:
+      - "${APP_PORT}:3000"
+    env_file:
+      - .env
+    depends_on:
+      - dynamodb
+
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: dynamodb-local
+    command: "-jar DynamoDBLocal.jar -sharedDb"
+    ports:
+      - "8000:8000"

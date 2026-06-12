@@ -1,0 +1,38 @@
+# ==============================================================================
+# SERVICIO: Go (.gitignore)
+# ==============================================================================
+
+# --- Ejecutables y Binarios Compilados ---
+# Archivos ejecutables de Windows
+*.exe
+*.exe~
+*.dll
+*.sys
+*.dylib
+
+# Binarios compilados de Linux / macOS (sin extensión habitual)
+# Si compilas a un nombre específico de binario, agrégalo aquí
+/bin/
+/dist/
+
+# --- Objetos y Archivos Compilados ---
+*.a
+*.o
+*.so
+
+# --- Pruebas y Cobertura (Testing & Profiling) ---
+*.test
+*.out
+*.prof
+coverage.txt
+
+# --- Configuración y Secretos ---
+.env
+.env.local
+*.env
+
+# --- Dependencias (Opcional) ---
+# Descomenta la siguiente línea si no quieres subir la carpeta vendor/
+# vendor/
+
+service-go.md
