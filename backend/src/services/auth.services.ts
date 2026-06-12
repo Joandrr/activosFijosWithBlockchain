@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { pool } from "../config/db.js";
+import { prisma } from "../config/db.js";
 import { env } from "../config/env.js";
 
 // ──────────────────────────────────────────────
@@ -57,42 +57,53 @@ export async function registerUser(input: RegisterInput): Promise<{ user: AuthUs
     const { nombre, apellido, genero, email, password, rol_id } = input;
 
     // Verificar email duplicado
-    const existing = await pool.query<{ id: number }>(
-        "SELECT id FROM usuario WHERE email = $1",
-        [email]
-    );
-    if ((existing.rowCount ?? 0) > 0) {
+    const existing = await prisma.usuario.findFirst({
+        where: { email }
+    });
+    if (existing) {
         throw new Error("El email ya está registrado.");
     }
 
     // Verificar que el rol exista
-    const rolCheck = await pool.query<{ id: number }>(
-        "SELECT id FROM rol WHERE id = $1",
-        [rol_id]
-    );
-    if ((rolCheck.rowCount ?? 0) === 0) {
+    const rolCheck = await prisma.rol.findUnique({
+        where: { id: rol_id }
+    });
+    if (!rolCheck) {
         throw new Error("El rol especificado no existe.");
     }
 
     // Obtener siguiente ID (tabla sin SERIAL)
-    const idResult = await pool.query<{ max: number | null }>(
-        "SELECT MAX(id) AS max FROM usuario"
-    );
-    const nextId = (idResult.rows[0]?.max ?? 0) + 1;
+    const maxId = await prisma.usuario.aggregate({
+        _max: { id: true }
+    });
+    const nextId = (maxId._max.id ?? 0) + 1;
 
     // Hash de la contraseña
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Insertar usuario
-    const result = await pool.query<AuthUser>(
-        `INSERT INTO usuario (id, nombre, apellido, genero, email, password, estado, rol_id)
-     VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)
-     RETURNING id, nombre, apellido, genero, email, rol_id, estado`,
-        [nextId, nombre, apellido, genero, email, hashedPassword, rol_id]
-    );
+    const createdUser = await prisma.usuario.create({
+        data: {
+            id: nextId,
+            nombre,
+            apellido,
+            genero,
+            email,
+            password: hashedPassword,
+            estado: true,
+            rol_id
+        }
+    });
 
-    const user = result.rows[0];
-    if (!user) throw new Error("Error al crear el usuario.");
+    const user: AuthUser = {
+        id: createdUser.id,
+        nombre: createdUser.nombre,
+        apellido: createdUser.apellido,
+        genero: createdUser.genero,
+        email: createdUser.email,
+        rol_id: createdUser.rol_id ?? 0,
+        estado: createdUser.estado ?? true
+    };
 
     const token = signToken(user);
     return { user, token };
@@ -104,13 +115,9 @@ export async function registerUser(input: RegisterInput): Promise<{ user: AuthUs
 export async function loginUser(input: LoginInput): Promise<{ user: AuthUser; token: string }> {
     const { email, password } = input;
 
-    const result = await pool.query<AuthUser & { password: string }>(
-        `SELECT id, nombre, apellido, genero, email, password, rol_id, estado
-     FROM usuario WHERE email = $1`,
-        [email]
-    );
-
-    const row = result.rows[0];
+    const row = await prisma.usuario.findFirst({
+        where: { email }
+    });
     if (!row) {
         throw new Error("Credenciales incorrectas.");
     }
@@ -130,8 +137,8 @@ export async function loginUser(input: LoginInput): Promise<{ user: AuthUser; to
         apellido: row.apellido,
         genero: row.genero,
         email: row.email,
-        rol_id: row.rol_id,
-        estado: row.estado,
+        rol_id: row.rol_id ?? 0,
+        estado: row.estado ?? true,
     };
 
     const token = signToken(user);
@@ -142,10 +149,17 @@ export async function loginUser(input: LoginInput): Promise<{ user: AuthUser; to
 // Obtener perfil por ID
 // ──────────────────────────────────────────────
 export async function getUserById(id: number): Promise<AuthUser | null> {
-    const result = await pool.query<AuthUser>(
-        `SELECT id, nombre, apellido, genero, email, rol_id, estado
-     FROM usuario WHERE id = $1`,
-        [id]
-    );
-    return result.rows[0] ?? null;
+    const row = await prisma.usuario.findUnique({
+        where: { id }
+    });
+    if (!row) return null;
+    return {
+        id: row.id,
+        nombre: row.nombre,
+        apellido: row.apellido,
+        genero: row.genero,
+        email: row.email,
+        rol_id: row.rol_id ?? 0,
+        estado: row.estado ?? true
+    };
 }

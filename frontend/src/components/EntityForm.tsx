@@ -15,9 +15,9 @@ interface Props {
   title: string;
   fields: Field[];
   service: {
-    getById: (id: number | string) => Promise<Record<string, unknown>>;
-    create: (data: Record<string, unknown>) => Promise<unknown>;
-    update: (id: number | string, data: Record<string, unknown>) => Promise<unknown>;
+    getById: (id: number | string) => Promise<any>;
+    create: (data: any) => Promise<any>;
+    update: (id: number | string, data: any) => Promise<any>;
   };
   backPath: string;
   transform?: (data: Record<string, unknown>) => Record<string, unknown>;

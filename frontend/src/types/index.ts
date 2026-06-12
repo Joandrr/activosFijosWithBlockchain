@@ -15,7 +15,7 @@ export interface DetalleTipo {
   nombre: string;
   descripcion: string;
   estado: boolean;
-  tipo_id: number;
+  tipo_id: number | null;
   tipo_nombre?: string;
 }
 
@@ -29,7 +29,7 @@ export interface Lugar {
   id: number;
   nombre: string;
   descripcion: string;
-  tipo_lugar_id: number;
+  tipo_lugar_id: number | null;
   tipo_lugar_nombre?: string;
 }
 
@@ -91,7 +91,7 @@ export interface Usuario {
   genero: string;
   email: string;
   estado: boolean;
-  rol_id: number;
+  rol_id: number | null;
   rol_nombre?: string;
 }
 

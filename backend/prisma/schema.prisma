@@ -1,12 +1,185 @@
 // This is your Prisma schema file
 // Docs: https://pris.ly/d/prisma-schema
-// En Prisma v7, la URL de conexión se define en prisma.config.ts
+// En Prisma v7, la URL de conexión se define en prisma.config.ts y aquí a través de env()
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model Permiso {
+  id          Int          @id
+  nombre      String       @db.VarChar(100)
+  descripcion String       @db.VarChar(255)
+  estado      Boolean?     @default(true)
+  roles       RolPermiso[]
+
+  @@map("permiso")
+}
+
+model Rol {
+  id          Int          @id
+  nombre      String       @db.VarChar(100)
+  descripcion String       @db.VarChar(255)
+  permisos    RolPermiso[]
+  usuarios    Usuario[]
+
+  @@map("rol")
+}
+
+model RolPermiso {
+  rol_id     Int
+  permiso_id Int
+  rol        Rol     @relation(fields: [rol_id], references: [id], onDelete: Cascade)
+  permiso    Permiso @relation(fields: [permiso_id], references: [id], onDelete: Cascade)
+
+  @@id([rol_id, permiso_id])
+  @@map("rol_permiso")
+}
+
+model Usuario {
+  id                 Int                @id
+  nombre             String             @db.VarChar(100)
+  apellido           String             @db.VarChar(100)
+  genero             String             @db.Char(1)
+  email              String             @db.VarChar(100)
+  password           String             @db.VarChar(255)
+  estado             Boolean?           @default(true)
+  rol_id             Int?
+  rol                Rol?               @relation(fields: [rol_id], references: [id], onDelete: SetNull)
+  movimientos        Movimiento[]
+  responsableLugares ResponsableLugar[]
+
+  @@map("usuario")
+}
+
+model Marca {
+  id          Int      @id
+  nombre      String   @db.VarChar(100)
+  descripcion String   @db.VarChar(255)
+  activos     Activo[]
+
+  @@map("marca")
+}
+
+model Tipo {
+  id           Int           @id
+  nombre       String        @db.VarChar(100)
+  descripcion  String        @db.VarChar(255)
+  detalleTipos DetalleTipo[]
+  activos      Activo[]
+
+  @@map("tipo")
+}
+
+model DetalleTipo {
+  id          Int      @id
+  nombre      String   @db.VarChar(100)
+  descripcion String   @db.VarChar(255)
+  estado      Boolean? @default(true)
+  tipo_id     Int?
+  tipo        Tipo?    @relation(fields: [tipo_id], references: [id], onDelete: SetNull)
+
+  @@map("detalle_tipo")
+}
+
+model TipoLugar {
+  id          Int     @id
+  nombre      String  @db.VarChar(100)
+  descripcion String  @db.VarChar(255)
+  lugares     Lugar[]
+
+  @@map("tipo_lugar")
+}
+
+model Lugar {
+  id                 Int                @id
+  nombre             String             @db.VarChar(100)
+  descripcion        String             @db.VarChar(255)
+  tipo_lugar_id      Int?
+  tipoLugar          TipoLugar?         @relation(fields: [tipo_lugar_id], references: [id], onDelete: SetNull)
+  activos            Activo[]
+  movimientosOrigen  Movimiento[]       @relation("lugarOrigen")
+  movimientosDestino Movimiento[]       @relation("lugarDestino")
+  responsableLugares ResponsableLugar[]
+
+  @@map("lugar")
+}
+
+model Activo {
+  id             Int                   @id
+  codigo         String                @db.VarChar(100)
+  nombre         String                @db.VarChar(100)
+  urlImagen      String                @db.VarChar(500)
+  fecha_registro DateTime              @db.Date
+  estado         Boolean?              @default(true)
+  tipo_id        Int?
+  marca_id       Int?
+  lugar_id       Int?
+  tipo           Tipo?                 @relation(fields: [tipo_id], references: [id], onDelete: SetNull)
+  marca          Marca?                @relation(fields: [marca_id], references: [id], onDelete: SetNull)
+  lugar          Lugar?                @relation(fields: [lugar_id], references: [id], onDelete: SetNull)
+  detallesEstado DetalleEstadoActivo[]
+
+  @@map("activo")
+}
+
+model EstadoMovimiento {
+  id          Int          @id
+  nombre      String       @db.VarChar(100)
+  movimientos Movimiento[]
+
+  @@map("estado_movimiento")
+}
+
+model EstadoActivo {
+  id             Int                   @id
+  nombre         String                @db.VarChar(100)
+  detallesEstado DetalleEstadoActivo[]
+  movimientos    Movimiento[]
+
+  @@map("estado_activo")
+}
+
+model DetalleEstadoActivo {
+  id               Int          @id
+  activo_id        Int?
+  estado_activo_id Int?
+  fecha_registro   DateTime     @db.Date
+  activo           Activo?      @relation(fields: [activo_id], references: [id], onDelete: SetNull)
+  estadoActivo     EstadoActivo? @relation(fields: [estado_activo_id], references: [id], onDelete: SetNull)
+
+  @@map("detalle_estado_activo")
+}
+
+model Movimiento {
+  id                   Int               @id
+  codigo_movimiento    String            @db.VarChar(10)
+  fecha_movimiento     DateTime          @db.Date
+  observaciones        String            @db.VarChar(550)
+  estado_movimiento_id Int?
+  estado_activo_id     Int?
+  lugar_origen_id      Int?
+  lugar_destino_id     Int?
+  usuario_id           Int?
+  estadoMovimiento     EstadoMovimiento? @relation(fields: [estado_movimiento_id], references: [id], onDelete: SetNull)
+  estadoActivo         EstadoActivo?     @relation(fields: [estado_activo_id], references: [id], onDelete: SetNull)
+  lugarOrigen          Lugar?            @relation("lugarOrigen", fields: [lugar_origen_id], references: [id], onDelete: SetNull)
+  lugarDestino         Lugar?            @relation("lugarDestino", fields: [lugar_destino_id], references: [id], onDelete: SetNull)
+  usuario              Usuario?          @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@map("movimiento")
+}
+
+model ResponsableLugar {
+  id         Int      @id
+  lugar_id   Int?
+  usuario_id Int?
+  lugar      Lugar?   @relation(fields: [lugar_id], references: [id], onDelete: SetNull)
+  usuario    Usuario? @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@map("responsable_lugar")
 }

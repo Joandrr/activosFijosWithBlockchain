@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: activos_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_DB: activosFICCT
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: activos_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres_password@db:5432/activosFICCT
+      PORT: 3000
+      JWT_SECRET: super_secret_key_docker_cambiar
+      NODE_ENV: production
+    depends_on:
+      - db
+    command: sh -c "until pg_isready -h db -p 5432 -U postgres; do echo 'Aguardando a la base de datos...'; sleep 2; done; npm run migration && npm run seed && npm run start"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: activos_frontend
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  blockchain:
+    build:
+      context: ./blockchain
+      dockerfile: Dockerfile
+    container_name: activos_blockchain
+    restart: always
+    ports:
+      - "8545:8545"
+
+volumes:
+  postgres_data:
