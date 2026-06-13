@@ -42,14 +42,29 @@ services:
     depends_on:
       - backend
 
-  blockchain:
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: dynamodb-local
+    command: "-jar DynamoDBLocal.jar -sharedDb"
+    ports:
+      - "8000:8000"
+    restart: always
+
+  service-go:
     build:
-      context: ./blockchain
+      context: ./service-go
       dockerfile: Dockerfile
-    container_name: activos_blockchain
+    container_name: service-go
     restart: always
     ports:
-      - "8545:8545"
+      - "3030:3000"
+    environment:
+      - AWS_REGION=us-east-1
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+    depends_on:
+      - dynamodb
 
 volumes:
   postgres_data:

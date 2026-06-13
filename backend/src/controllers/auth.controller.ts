@@ -8,12 +8,12 @@ function getErrorMessage(err: unknown): string {
 
 export async function register(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { nombre, apellido, genero, email, password, rol_id } = req.body;
+    const { nombre, apellido, genero, fecha_nacimiento, email, password, rol_id } = req.body;
     if (!nombre || !apellido || !genero || !email || !password || !rol_id) {
       res.status(400).json({ ok: false, message: "Todos los campos son obligatorios." });
       return;
     }
-    const result = await registerUser({ nombre, apellido, genero, email, password, rol_id });
+    const result = await registerUser({ nombre, apellido, genero, fecha_nacimiento, email, password, rol_id });
     res.status(201).json({ ok: true, data: result });
   } catch (err: unknown) {
     res.status(400).json({ ok: false, message: getErrorMessage(err) });

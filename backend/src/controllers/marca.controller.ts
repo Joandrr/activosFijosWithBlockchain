@@ -15,22 +15,22 @@ export async function getById(req: Request, res: Response): Promise<void> {
 }
 
 export async function create(req: Request, res: Response): Promise<void> {
-  const { nombre, descripcion } = req.body;
+  const { nombre, origen } = req.body;
   if (!nombre) { res.status(400).json({ ok: false, message: "Nombre requerido." }); return; }
   const id = await getNextId("marca");
   const data = await prisma.marca.create({
-    data: { id, nombre, descripcion: descripcion ?? "" }
+    data: { id, nombre, origen: origen ?? "" }
   });
   res.status(201).json({ ok: true, data });
 }
 
 export async function update(req: Request, res: Response): Promise<void> {
   const id = Number(req.params.id);
-  const { nombre, descripcion } = req.body;
+  const { nombre, origen } = req.body;
   
   const updateData: any = {};
   if (nombre !== undefined) updateData.nombre = nombre;
-  if (descripcion !== undefined) updateData.descripcion = descripcion;
+  if (origen !== undefined) updateData.origen = origen;
 
   try {
     const data = await prisma.marca.update({

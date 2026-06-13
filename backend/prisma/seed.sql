@@ -5,8 +5,10 @@
 -- Roles
 INSERT INTO rol (id, nombre, descripcion) VALUES
 (1, 'Administrador', 'Acceso total al sistema'),
-(2, 'Usuario', 'Acceso básico de consulta y registro')
-ON CONFLICT (id) DO NOTHING;
+(2, 'Auxiliar de Laboratorio', 'Acceso para registro y movimiento de activos en laboratorios'),
+(3, 'Administrativo', 'Acceso administrativo para registro y movimiento de activos'),
+(4, 'Jefe de Centro Interno', 'Acceso de jefatura para registro y movimiento de activos en centro interno')
+ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion;
 
 -- Permisos base
 INSERT INTO permiso (id, nombre, descripcion, estado) VALUES
@@ -27,33 +29,41 @@ INSERT INTO rol_permiso (rol_id, permiso_id)
 SELECT 1, id FROM permiso
 ON CONFLICT DO NOTHING;
 
--- Asignar permisos básicos a Usuario
+-- Asignar permisos básicos a Auxiliar de Laboratorio, Administrativo y Jefe de Centro Interno
 INSERT INTO rol_permiso (rol_id, permiso_id)
-SELECT 2, id FROM permiso WHERE nombre IN ('VER_ACTIVOS', 'VER_MOVIMIENTOS', 'VER_MARCAS')
+SELECT 2, id FROM permiso WHERE nombre IN ('VER_ACTIVOS', 'VER_MOVIMIENTOS', 'CREAR_MOVIMIENTOS', 'VER_MARCAS')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO rol_permiso (rol_id, permiso_id)
+SELECT 3, id FROM permiso WHERE nombre IN ('VER_ACTIVOS', 'VER_MOVIMIENTOS', 'CREAR_MOVIMIENTOS', 'VER_MARCAS')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO rol_permiso (rol_id, permiso_id)
+SELECT 4, id FROM permiso WHERE nombre IN ('VER_ACTIVOS', 'VER_MOVIMIENTOS', 'CREAR_MOVIMIENTOS', 'VER_MARCAS')
 ON CONFLICT DO NOTHING;
 
 -- Estados de movimiento
 INSERT INTO estado_movimiento (id, nombre) VALUES
-(1, 'Pendiente'),
-(2, 'En Proceso'),
-(3, 'Completado'),
-(4, 'Cancelado')
-ON CONFLICT (id) DO NOTHING;
+(1, 'En Proceso'),
+(2, 'Ejecutado'),
+(3, 'Anulado')
+ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre;
 
 -- Estados de activo
 INSERT INTO estado_activo (id, nombre) VALUES
-(1, 'Bueno'),
-(2, 'Regular'),
-(3, 'En Mantenimiento'),
-(4, 'Dado de Baja')
-ON CONFLICT (id) DO NOTHING;
+(1, 'Disponible'),
+(2, 'Baja')
+ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre;
 
 -- Tipos de lugar
 INSERT INTO tipo_lugar (id, nombre, descripcion) VALUES
-(1, 'Edificio', 'Edificio universitario'),
-(2, 'Laboratorio', 'Laboratorio académico'),
-(3, 'Oficina', 'Oficina administrativa'),
-(4, 'Aula', 'Aula de clases')
+(1, 'Oficina', 'Oficinas administrativas'),
+(2, 'Biblioteca', 'Bibliotecas de la facultad'),
+(3, 'Laboratorio', 'Laboratorios académicos y de cómputo'),
+(4, 'Aula', 'Aulas de clases ordinarias'),
+(5, 'Centro Interno', 'Centros internos de estudiantes o investigación'),
+(6, 'Auditorio', 'Auditorios y salas de eventos'),
+(7, 'Otros', 'Otros espacios de la facultad')
 ON CONFLICT (id) DO NOTHING;
 
 -- Tipos de activo
@@ -66,10 +76,10 @@ INSERT INTO tipo (id, nombre, descripcion) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Marcas
-INSERT INTO marca (id, nombre, descripcion) VALUES
-(1, 'Dell', 'Equipos de cómputo'),
-(2, 'HP', 'Equipos de cómputo e impresoras'),
-(3, 'Lenovo', 'Equipos de cómputo'),
-(4, 'LG', 'Electrodomésticos y monitores'),
-(5, 'Toyota', 'Vehículos')
+INSERT INTO marca (id, nombre, origen) VALUES
+(1, 'Dell', 'USA'),
+(2, 'HP', 'USA'),
+(3, 'Lenovo', 'China'),
+(4, 'LG', 'Corea del Sur'),
+(5, 'Toyota', 'Japón')
 ON CONFLICT (id) DO NOTHING;

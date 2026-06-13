@@ -20,10 +20,10 @@ interface Props<T extends { id: number | string }> {
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
-    <tr>
+    <tr className="border-b border-white/5">
       {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-100 rounded animate-pulse" style={{ width: `${60 + Math.random() * 40}%` }} />
+        <td key={i} className="px-4 py-4">
+          <div className="h-4 bg-slate-800/60 rounded animate-pulse" style={{ width: `${60 + Math.random() * 40}%` }} />
         </td>
       ))}
     </tr>
@@ -55,8 +55,8 @@ export default function DataTable<T extends { id: number | string }>({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100"><div className="h-9 w-64 bg-slate-100 rounded-lg animate-pulse" /></div>
+      <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden shadow-xl">
+        <div className="p-4 border-b border-white/5"><div className="h-9 w-64 bg-slate-850 rounded-lg animate-pulse" /></div>
         <table className="w-full"><tbody>{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} cols={columns.length + ((onEdit || onDelete) ? 1 : 0)} />)}</tbody></table>
       </div>
     );
@@ -71,45 +71,45 @@ export default function DataTable<T extends { id: number | string }>({
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
             placeholder={searchPlaceholder || "Buscar..."}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white"
+            className="w-full pl-9 pr-4 py-2 bg-slate-900/40 border border-white/10 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
           />
         </div>
         {createLink && (
-          <a href={createLink} className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm">
+          <a href={createLink} className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md shadow-indigo-600/15">
             <FiPlus size={16} /> {createLabel || "Nuevo"}
           </a>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-slate-900/30 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
+              <tr className="border-b border-white/5 bg-slate-950/20">
                 {columns.map((col) => (
-                  <th key={col.key} className="text-left px-4 py-3.5 font-semibold text-slate-600 text-xs uppercase tracking-wider">{col.label}</th>
+                  <th key={col.key} className="text-left px-4 py-4 font-bold text-slate-400 text-xs uppercase tracking-wider">{col.label}</th>
                 ))}
-                {(onEdit || onDelete) && <th className="text-left px-4 py-3.5 font-semibold text-slate-600 text-xs uppercase tracking-wider">Acciones</th>}
+                {(onEdit || onDelete) && <th className="text-left px-4 py-4 font-bold text-slate-400 text-xs uppercase tracking-wider">Acciones</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-white/5">
               {paginated.map((row) => (
-                <tr key={row.id} className="hover:bg-indigo-50/30 transition-colors">
+                <tr key={row.id} className="hover:bg-white/5 transition-all">
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 text-slate-700">
+                    <td key={col.key} className="px-4 py-3.5 text-slate-300 font-medium">
                       {col.render ? col.render((row as Record<string, unknown>)[col.key], row) : String((row as Record<string, unknown>)[col.key] ?? "-")}
                     </td>
                   ))}
                   {(onEdit || onDelete) && (
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5">
                       <div className="flex gap-1.5">
                         {onEdit && (
-                          <button onClick={() => onEdit(row.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                          <button onClick={() => onEdit(row.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all cursor-pointer">
                             <FiEdit2 size={15} />
                           </button>
                         )}
                         {onDelete && (
-                          <button onClick={() => onDelete(row.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                          <button onClick={() => onDelete(row.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer">
                             <FiTrash2 size={15} />
                           </button>
                         )}
@@ -119,20 +119,20 @@ export default function DataTable<T extends { id: number | string }>({
                 </tr>
               ))}
               {paginated.length === 0 && (
-                <tr><td colSpan={columns.length + ((onEdit || onDelete) ? 1 : 0)} className="text-center py-12 text-slate-400">Sin registros</td></tr>
+                <tr><td colSpan={columns.length + ((onEdit || onDelete) ? 1 : 0)} className="text-center py-12 text-slate-500">Sin registros</td></tr>
               )}
             </tbody>
           </table>
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+          <div className="flex items-center justify-between px-4 py-3.5 border-t border-white/5 bg-slate-950/10">
             <span className="text-xs text-slate-500">{page * perPage + 1}-{Math.min((page + 1) * perPage, filtered.length)} de {filtered.length}</span>
             <div className="flex gap-1">
-              <button disabled={page === 0} onClick={() => setPage(page - 1)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed">
+              <button disabled={page === 0} onClick={() => setPage(page - 1)} className="p-1.5 rounded-lg text-slate-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed">
                 <FiChevronLeft size={16} />
               </button>
-              <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed">
+              <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} className="p-1.5 rounded-lg text-slate-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed">
                 <FiChevronRight size={16} />
               </button>
             </div>

@@ -3,11 +3,13 @@ import DataTable from "../components/DataTable";
 import { lugarService, tipoLugarService } from "../services";
 import type { Lugar } from "../types";
 import { AxiosError } from "axios";
+import { FiPlus, FiX, FiTag, FiFileText, FiMap } from "react-icons/fi";
 
-export default function Lugares() {
+export default function Lugares({ showHeader = true }: { showHeader?: boolean }) {
   const [data, setData] = useState<Lugar[]>([]);
   const [tipoLugarOptions, setTipoLugarOptions] = useState<{ id: number; nombre: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState<number | string | null>(null);
   const [form, setForm] = useState({ nombre: "", descripcion: "", tipo_lugar_id: "" });
   const [saving, setSaving] = useState(false);
@@ -18,85 +20,93 @@ export default function Lugares() {
       const [lugares, tipos] = await Promise.all([lugarService.getAll(), tipoLugarService.getAll()]);
       setData(lugares);
       setTipoLugarOptions(tipos);
-    } catch { setData([]); } finally { setLoading(false); }
+    } catch {
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleDelete = async (id: number | string) => {
     if (!confirm("¿Eliminar lugar?")) return;
-    try { await lugarService.remove(id); setData((prev) => prev.filter((d) => d.id !== id)); }
-    catch (err: unknown) { alert(err instanceof AxiosError ? err.response?.data?.message : "Error"); }
+    try {
+      await lugarService.remove(id);
+      setData((prev) => prev.filter((d) => d.id !== id));
+    } catch (err: unknown) {
+      alert(err instanceof AxiosError ? err.response?.data?.message : "Error");
+    }
+  };
+
+  const openCreateModal = () => {
+    setForm({ nombre: "", descripcion: "", tipo_lugar_id: "" });
+    setEditId(null);
+    setIsModalOpen(true);
   };
 
   const handleEdit = (id: number | string) => {
     const item = data.find((d) => d.id === id);
     if (item) {
-      setForm({ nombre: item.nombre, descripcion: item.descripcion, tipo_lugar_id: String(item.tipo_lugar_id ?? "") });
+      setForm({
+        nombre: item.nombre,
+        descripcion: item.descripcion,
+        tipo_lugar_id: String(item.tipo_lugar_id ?? "")
+      });
       setEditId(id);
+      setIsModalOpen(true);
     }
   };
 
-  const handleSave = async () => {
-    if (!form.nombre) return;
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     setSaving(true);
-    const payload = { ...form, tipo_lugar_id: form.tipo_lugar_id ? Number(form.tipo_lugar_id) : null };
+    const payload = {
+      ...form,
+      tipo_lugar_id: form.tipo_lugar_id ? Number(form.tipo_lugar_id) : null
+    };
     try {
       if (editId) {
         await lugarService.update(editId, payload);
-        setData((prev) => prev.map((d) => d.id === editId ? { ...d, ...payload } : d));
-        setEditId(null);
       } else {
         await lugarService.create(payload);
-        await load();
       }
-      setForm({ nombre: "", descripcion: "", tipo_lugar_id: "" });
+      setIsModalOpen(false);
+      load();
     } catch (err: unknown) {
-      alert(err instanceof AxiosError ? err.response?.data?.message : "Error");
-    } finally { setSaving(false); }
+      alert(err instanceof AxiosError ? err.response?.data?.message : "Error al guardar");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-800">Lugares</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Ubicaciones de activos</p>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 mb-6 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      {showHeader ? (
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Nombre *</label>
-            <input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
+            <h1 className="text-2xl font-bold text-slate-100">Lugares</h1>
+            <p className="text-sm text-slate-450 mt-0.5">Administrar ubicaciones de activos</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Descripción</label>
-            <input value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-              className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Tipo</label>
-            <select value={form.tipo_lugar_id} onChange={(e) => setForm({ ...form, tipo_lugar_id: e.target.value })}
-              className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white">
-              <option value="">Sin tipo</option>
-              {tipoLugarOptions.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-            </select>
-          </div>
-          <div className="flex items-end gap-2">
-            <button onClick={handleSave} disabled={saving || !form.nombre}
-              className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 shadow-sm">
-              {saving ? "Guardando..." : editId ? "Actualizar" : "Agregar"}
-            </button>
-            {editId && (
-              <button onClick={() => { setEditId(null); setForm({ nombre: "", descripcion: "", tipo_lugar_id: "" }); }}
-                className="px-5 py-2.5 rounded-xl text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                Cancelar
-              </button>
-            )}
-          </div>
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md shadow-indigo-600/10 cursor-pointer"
+          >
+            <FiPlus size={16} /> Nuevo Lugar
+          </button>
         </div>
-      </div>
+      ) : (
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md shadow-indigo-600/15 cursor-pointer"
+          >
+            <FiPlus size={16} /> Nuevo Lugar
+          </button>
+        </div>
+      )}
 
       <DataTable<Lugar>
         columns={[
@@ -105,7 +115,93 @@ export default function Lugares() {
           { key: "descripcion", label: "Descripción" },
           { key: "tipo_lugar_nombre", label: "Tipo" },
         ]}
-        data={data} loading={loading} onEdit={handleEdit} onDelete={handleDelete} />
+        data={data}
+        loading={loading}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        searchPlaceholder="Buscar lugar..."
+      />
+
+      {/* Modal Dialog */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300">
+          <div className="bg-slate-900 rounded-2xl w-full max-w-md border border-white/5 shadow-2xl overflow-hidden relative transform transition-transform duration-300 scale-100">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-slate-950/20">
+              <h2 className="text-lg font-bold text-slate-100">
+                {editId ? "Editar Lugar" : "Registrar Nuevo Lugar"}
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+              >
+                <FiX size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSave} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <FiTag className="text-indigo-400" /> Nombre *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.nombre}
+                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                  placeholder="Ej. Oficina A-102, Biblioteca Central"
+                  className="w-full px-3.5 py-2.5 bg-slate-950/50 border border-white/10 rounded-xl text-sm text-white placeholder-white/20 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <FiFileText className="text-indigo-400" /> Descripción
+                </label>
+                <input
+                  type="text"
+                  value={form.descripcion}
+                  onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                  placeholder="Ej. Pabellón de aulas nuevas, piso 2"
+                  className="w-full px-3.5 py-2.5 bg-slate-950/50 border border-white/10 rounded-xl text-sm text-white placeholder-white/20 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <FiMap className="text-indigo-400" /> Tipo de Lugar
+                </label>
+                <select
+                  value={form.tipo_lugar_id}
+                  onChange={(e) => setForm({ ...form, tipo_lugar_id: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-950/50 border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-slate-900 transition-all"
+                >
+                  <option value="">Sin tipo</option>
+                  {tipoLugarOptions.map((t) => (
+                    <option key={t.id} value={t.id} className="bg-slate-900">{t.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4.5 py-2.5 rounded-xl border border-white/10 text-slate-300 text-sm font-medium hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4.5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer shadow-md shadow-indigo-600/10"
+                >
+                  {saving ? "Guardando..." : editId ? "Guardar Cambios" : "Crear Lugar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

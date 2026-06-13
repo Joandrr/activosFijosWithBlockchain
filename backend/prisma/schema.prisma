@@ -45,6 +45,7 @@ model Usuario {
   nombre             String             @db.VarChar(100)
   apellido           String             @db.VarChar(100)
   genero             String             @db.Char(1)
+  fecha_nacimiento   DateTime?          @db.Date
   email              String             @db.VarChar(100)
   password           String             @db.VarChar(255)
   estado             Boolean?           @default(true)
@@ -57,10 +58,10 @@ model Usuario {
 }
 
 model Marca {
-  id          Int      @id
-  nombre      String   @db.VarChar(100)
-  descripcion String   @db.VarChar(255)
-  activos     Activo[]
+  id      Int      @id
+  nombre  String   @db.VarChar(100)
+  origen  String   @db.VarChar(255)
+  activos Activo[]
 
   @@map("marca")
 }
@@ -119,10 +120,14 @@ model Activo {
   tipo_id        Int?
   marca_id       Int?
   lugar_id       Int?
+  contrato_uuid  String?               @db.VarChar(100)
+  firma_creacion String?               @db.VarChar(550)
+  firma_baja     String?               @db.VarChar(550)
   tipo           Tipo?                 @relation(fields: [tipo_id], references: [id], onDelete: SetNull)
   marca          Marca?                @relation(fields: [marca_id], references: [id], onDelete: SetNull)
   lugar          Lugar?                @relation(fields: [lugar_id], references: [id], onDelete: SetNull)
   detallesEstado DetalleEstadoActivo[]
+  movimientos    Movimiento[]
 
   @@map("activo")
 }
@@ -165,11 +170,16 @@ model Movimiento {
   lugar_origen_id      Int?
   lugar_destino_id     Int?
   usuario_id           Int?
+  activo_id            Int?
+  contrato_uuid        String?           @db.VarChar(100)
+  firma_emisor         String?           @db.VarChar(550)
+  firma_receptor       String?           @db.VarChar(550)
   estadoMovimiento     EstadoMovimiento? @relation(fields: [estado_movimiento_id], references: [id], onDelete: SetNull)
   estadoActivo         EstadoActivo?     @relation(fields: [estado_activo_id], references: [id], onDelete: SetNull)
   lugarOrigen          Lugar?            @relation("lugarOrigen", fields: [lugar_origen_id], references: [id], onDelete: SetNull)
   lugarDestino         Lugar?            @relation("lugarDestino", fields: [lugar_destino_id], references: [id], onDelete: SetNull)
   usuario              Usuario?          @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+  activo               Activo?           @relation(fields: [activo_id], references: [id], onDelete: SetNull)
 
   @@map("movimiento")
 }

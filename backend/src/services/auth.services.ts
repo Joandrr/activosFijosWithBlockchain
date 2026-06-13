@@ -10,6 +10,7 @@ export interface RegisterInput {
     nombre: string;
     apellido: string;
     genero: "M" | "F";
+    fecha_nacimiento?: string;
     email: string;
     password: string;
     rol_id: number;
@@ -26,6 +27,7 @@ export interface AuthUser {
     apellido: string;
     email: string;
     genero: string;
+    fecha_nacimiento?: Date | null;
     rol_id: number;
     estado: boolean;
 }
@@ -54,7 +56,7 @@ export function verifyToken(token: string): jwt.JwtPayload {
 // Registro
 // ──────────────────────────────────────────────
 export async function registerUser(input: RegisterInput): Promise<{ user: AuthUser; token: string }> {
-    const { nombre, apellido, genero, email, password, rol_id } = input;
+    const { nombre, apellido, genero, fecha_nacimiento, email, password, rol_id } = input;
 
     // Verificar email duplicado
     const existing = await prisma.usuario.findFirst({
@@ -88,6 +90,7 @@ export async function registerUser(input: RegisterInput): Promise<{ user: AuthUs
             nombre,
             apellido,
             genero,
+            fecha_nacimiento: fecha_nacimiento ? new Date(fecha_nacimiento) : null,
             email,
             password: hashedPassword,
             estado: true,
@@ -100,6 +103,7 @@ export async function registerUser(input: RegisterInput): Promise<{ user: AuthUs
         nombre: createdUser.nombre,
         apellido: createdUser.apellido,
         genero: createdUser.genero,
+        fecha_nacimiento: createdUser.fecha_nacimiento,
         email: createdUser.email,
         rol_id: createdUser.rol_id ?? 0,
         estado: createdUser.estado ?? true
@@ -136,6 +140,7 @@ export async function loginUser(input: LoginInput): Promise<{ user: AuthUser; to
         nombre: row.nombre,
         apellido: row.apellido,
         genero: row.genero,
+        fecha_nacimiento: row.fecha_nacimiento,
         email: row.email,
         rol_id: row.rol_id ?? 0,
         estado: row.estado ?? true,
@@ -158,6 +163,7 @@ export async function getUserById(id: number): Promise<AuthUser | null> {
         nombre: row.nombre,
         apellido: row.apellido,
         genero: row.genero,
+        fecha_nacimiento: row.fecha_nacimiento,
         email: row.email,
         rol_id: row.rol_id ?? 0,
         estado: row.estado ?? true

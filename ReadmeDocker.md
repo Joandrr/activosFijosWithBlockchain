@@ -1,7 +1,7 @@
 
 ## 🛠️ Requisitos Previos
 * Tener instalado **Docker Desktop** en tu equipo (incluye Docker Compose).
-* Asegurarte de que los puertos `8080`, `3000`, `5433` y `8545` no estén ocupados por otros servicios locales.
+* Asegurarte de que los puertos `8080`, `3000`, `5433`, `3030` y `8000` no estén ocupados por otros servicios locales.
 
 ---
 
@@ -64,8 +64,10 @@ Una vez que el entorno esté corriendo (`docker compose up -d`), puedes acceder 
 * **Frontend (React)**: [http://localhost:8080](http://localhost:8080)
 * **Backend (API Express)**: [http://localhost:3000](http://localhost:3000)
   * Ruta de estado de salud: [http://localhost:3000/health](http://localhost:3000/health)
-* **Blockchain (Hardhat Local Node)**: `http://localhost:8545`
-  * Este nodo simula una red EVM local. Provee 20 cuentas de prueba pre-financiadas con 10000 ETH cada una (visibles en los logs del contenedor `activos_blockchain`). Puedes conectar billeteras de desarrollo (como MetaMask) usando esta URL RPC y el Chain ID `31337`.
+* **Go Notary Service (Microservicio)**: [http://localhost:3030](http://localhost:3030)
+  * Servicio de firma y notaría en Go.
+* **DynamoDB Local**: [http://localhost:8000](http://localhost:8000)
+  * Base de datos local para el servicio notarial en Go.
 
 ---
 

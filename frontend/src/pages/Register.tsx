@@ -6,7 +6,7 @@ import { AxiosError } from "axios";
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nombre: "", apellido: "", genero: "M" as "M" | "F", email: "", password: "", rol_id: 2 });
+  const [form, setForm] = useState({ nombre: "", apellido: "", genero: "M" as "M" | "F", fecha_nacimiento: "", email: "", password: "", rol_id: 2 });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -15,7 +15,11 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      await register(form);
+      const payload = {
+        ...form,
+        fecha_nacimiento: form.fecha_nacimiento || undefined
+      };
+      await register(payload);
       navigate("/dashboard", { replace: true });
     } catch (err: unknown) {
       const msg = err instanceof AxiosError ? err.response?.data?.message : "Error al registrarse";
@@ -59,13 +63,20 @@ export default function Register() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-white/80 mb-1.5">Género</label>
-            <select value={form.genero} onChange={(e) => setForm({ ...form, genero: e.target.value as "M" | "F" })}
-              className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:ring-2 focus:ring-white/30 outline-none">
-              <option value="M" className="text-slate-800">Masculino</option>
-              <option value="F" className="text-slate-800">Femenino</option>
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-1.5">Género</label>
+              <select value={form.genero} onChange={(e) => setForm({ ...form, genero: e.target.value as "M" | "F" })}
+                className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:ring-2 focus:ring-white/30 outline-none bg-indigo-950">
+                <option value="M" className="text-slate-200 bg-indigo-950">Masculino</option>
+                <option value="F" className="text-slate-200 bg-indigo-950">Femenino</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-1.5">F. Nacimiento</label>
+              <input type="date" value={form.fecha_nacimiento} onChange={(e) => setForm({ ...form, fecha_nacimiento: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:ring-2 focus:ring-white/30 outline-none" />
+            </div>
           </div>
 
           <div>

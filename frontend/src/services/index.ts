@@ -1,4 +1,5 @@
 import { createService } from "./crud.service";
+import { apiPost } from "./api";
 import type {
   Marca, Tipo, DetalleTipo, TipoLugar, Lugar, Activo,
   Movimiento, Usuario, Rol, Permiso, EstadoMovimiento,
@@ -19,4 +20,8 @@ export const usuarioService = createService<Usuario>("/usuarios");
 export const rolService = createService<Rol>("/roles");
 export const permisoService = createService<Permiso>("/permisos");
 export const responsableLugarService = createService<ResponsableLugar>("/responsables-lugar");
+
+export const signReceptor = (id: number | string) => apiPost<Movimiento>(`/movimientos/${id}/sign-receptor`);
+export const signEmisor = (id: number | string) => apiPost<Movimiento>(`/movimientos/${id}/sign-emisor`);
+
 export { createService } from "./crud.service";

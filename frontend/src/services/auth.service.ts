@@ -10,6 +10,7 @@ export interface RegisterData {
   nombre: string;
   apellido: string;
   genero: "M" | "F";
+  fecha_nacimiento?: string;
   email: string;
   password: string;
   rol_id: number;

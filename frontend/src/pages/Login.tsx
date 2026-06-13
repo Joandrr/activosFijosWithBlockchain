@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { AxiosError } from "axios";
 
@@ -77,11 +77,6 @@ export default function Login() {
           >
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
-
-          <p className="text-center text-sm text-white/50">
-            ¿No tienes cuenta?{" "}
-            <Link to="/register" className="text-white/80 hover:text-white underline underline-offset-2">Regístrate</Link>
-          </p>
         </form>
       </div>
     </div>

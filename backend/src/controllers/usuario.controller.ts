@@ -13,6 +13,7 @@ export async function getAll(_req: Request, res: Response): Promise<void> {
     nombre: item.nombre,
     apellido: item.apellido,
     genero: item.genero,
+    fecha_nacimiento: item.fecha_nacimiento,
     email: item.email,
     estado: item.estado,
     rol_id: item.rol_id,
@@ -33,6 +34,7 @@ export async function getById(req: Request, res: Response): Promise<void> {
     nombre: item.nombre,
     apellido: item.apellido,
     genero: item.genero,
+    fecha_nacimiento: item.fecha_nacimiento,
     email: item.email,
     estado: item.estado,
     rol_id: item.rol_id,
@@ -42,7 +44,7 @@ export async function getById(req: Request, res: Response): Promise<void> {
 }
 
 export async function create(req: Request, res: Response): Promise<void> {
-  const { nombre, apellido, genero, email, password, rol_id } = req.body;
+  const { nombre, apellido, genero, fecha_nacimiento, email, password, rol_id } = req.body;
   if (!nombre || !email || !password) { res.status(400).json({ ok: false, message: "Nombre, email y password requeridos." }); return; }
   
   const existing = await prisma.usuario.findFirst({ where: { email } });
@@ -57,6 +59,7 @@ export async function create(req: Request, res: Response): Promise<void> {
       nombre,
       apellido: apellido ?? "",
       genero: genero ?? "M",
+      fecha_nacimiento: fecha_nacimiento ? new Date(fecha_nacimiento) : null,
       email,
       password: hashed,
       estado: true,
@@ -69,6 +72,7 @@ export async function create(req: Request, res: Response): Promise<void> {
     nombre: created.nombre,
     apellido: created.apellido,
     genero: created.genero,
+    fecha_nacimiento: created.fecha_nacimiento,
     email: created.email,
     estado: created.estado,
     rol_id: created.rol_id
@@ -78,12 +82,13 @@ export async function create(req: Request, res: Response): Promise<void> {
 
 export async function update(req: Request, res: Response): Promise<void> {
   const id = Number(req.params.id);
-  const { nombre, apellido, genero, email, estado, rol_id } = req.body;
+  const { nombre, apellido, genero, fecha_nacimiento, email, estado, rol_id } = req.body;
 
   const updateData: any = {};
   if (nombre !== undefined) updateData.nombre = nombre;
   if (apellido !== undefined) updateData.apellido = apellido;
   if (genero !== undefined) updateData.genero = genero;
+  if (fecha_nacimiento !== undefined) updateData.fecha_nacimiento = fecha_nacimiento ? new Date(fecha_nacimiento) : null;
   if (email !== undefined) updateData.email = email;
   if (estado !== undefined) updateData.estado = estado;
   if (rol_id !== undefined) updateData.rol_id = rol_id ? Number(rol_id) : null;
@@ -98,6 +103,7 @@ export async function update(req: Request, res: Response): Promise<void> {
       nombre: updated.nombre,
       apellido: updated.apellido,
       genero: updated.genero,
+      fecha_nacimiento: updated.fecha_nacimiento,
       email: updated.email,
       estado: updated.estado,
       rol_id: updated.rol_id
