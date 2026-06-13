@@ -27,10 +27,13 @@ services:
       PORT: 3000
       JWT_SECRET: super_secret_key_docker_cambiar
       NODE_ENV: production
+      #ONESIGNAL_APP_ID: "${ONESIGNAL_APP_ID}"
+      #ONESIGNAL_API_KEY: "${ONESIGNAL_API_KEY}"
     depends_on:
       - db
-    command: sh -c "until pg_isready -h db -p 5432 -U postgres; do echo 'Aguardando a la base de datos...'; sleep 2; done; npm run migration && npm run seed && npm run start"
 
+    #command: sh -c "until pg_isready -h db -p 5432 -U postgres; do echo 'Aguardando a la base de datos...'; sleep 2; done; npx prisma db push && npm run seed && npm run start"
+    command: sh -c "until pg_isready -h db -p 5432 -U postgres; do echo 'Aguardando a la base de datos...'; sleep 2; done; npm run migration && npm run seed && npm run start"
   frontend:
     build:
       context: ./frontend

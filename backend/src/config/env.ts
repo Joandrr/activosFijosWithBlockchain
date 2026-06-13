@@ -12,4 +12,6 @@ export const env = {
   JWT_EXPIRES_IN: process.env["JWT_EXPIRES_IN"] ?? "7d",
   PORT:         parseInt(process.env["PORT"] ?? "3000", 10),
   NODE_ENV:     process.env["NODE_ENV"] ?? "development",
+  // ONESIGNAL_APP_ID:requireEnv("ONESIGNAL_APP_ID"),
+  // ONESIGNAL_API_KEY:requireEnv("ONESIGNAL_API_KEY"),
 };
