@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "803224346257",
+    "project_id": "flutter-signature-303c1",
+    "storage_bucket": "flutter-signature-303c1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:803224346257:android:083c966492505631c96930",
+        "android_client_info": {
+          "package_name": "com.example.flutter_signature"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8tO0l94yFy-Dd6eE-9Wq2Mizx_mAZS-s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
