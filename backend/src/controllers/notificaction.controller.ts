@@ -1,7 +1,7 @@
 //  SOLUCIÓN 1:
 import type { Request, Response } from 'express';
 import express from 'express'; // Si es que usas "express.Router()" o algo similar abajo
-import { NotificationService } from '../services/notification.service';
+import { NotificationService } from '../services/notification.service.js';
 
 const service = new NotificationService();
 
@@ -19,8 +19,8 @@ export class NotificationController {
     } = req.body;
 
     const result =
-      await service.sendToUser(
-        userId,
+      await service.sendToUsers(
+        [userId],
         title,
         message,
       );

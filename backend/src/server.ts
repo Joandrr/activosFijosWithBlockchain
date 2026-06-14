@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import { env } from "./config/env.js";
 import { router } from "./routes/index.js";
-import notificationRoutes from './routes/notification.routes';
+import notificationRoutes from './routes/notification.routes.js';
 
 const app = express();
 

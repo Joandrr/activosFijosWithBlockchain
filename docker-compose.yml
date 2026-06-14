@@ -27,8 +27,8 @@ services:
       PORT: 3000
       JWT_SECRET: super_secret_key_docker_cambiar
       NODE_ENV: production
-      #ONESIGNAL_APP_ID: "${ONESIGNAL_APP_ID}"
-      #ONESIGNAL_API_KEY: "${ONESIGNAL_API_KEY}"
+      ONESIGNAL_APP_ID: "${ONESIGNAL_APP_ID}"
+      ONESIGNAL_API_KEY: "${ONESIGNAL_API_KEY}"
     depends_on:
       - db
 

@@ -2,6 +2,10 @@ import type { Request, Response } from "express";
 import { prisma } from "../config/db.js";
 import { getNextId } from "../utils/db.js";
 import { createNotaryContract, signNotaryContract } from "../utils/notary.js";
+import { generateAssetCertificate, generateAssetSummary } from "../utils/pdfGenerator.js";
+import { sseManager } from "../utils/sseManager.js";
+import { notificationService } from "../services/notification.service.js";
+import type { AuthRequest } from "../middlewares/auth.middleware.js";
 
 export async function getAll(_req: Request, res: Response): Promise<void> {
   const list = await prisma.activo.findMany({
@@ -77,6 +81,8 @@ export async function create(req: Request, res: Response): Promise<void> {
     ...created,
     fecha_registro: created.fecha_registro.toISOString().split("T")[0]
   };
+  sseManager.broadcast("activo_cambiado", { id: created.id, action: "create" });
+  notificationService.notifyAssetCreatedOrDecommissioned(created.id, 'created');
   res.status(201).json({ ok: true, data });
 }
 
@@ -119,6 +125,10 @@ export async function update(req: Request, res: Response): Promise<void> {
       ...updated,
       fecha_registro: updated.fecha_registro.toISOString().split("T")[0]
     };
+    sseManager.broadcast("activo_cambiado", { id: updated.id, action: "update" });
+    if (updateData.estado === false) {
+      notificationService.notifyAssetCreatedOrDecommissioned(updated.id, 'decommissioned');
+    }
     res.json({ ok: true, data });
   } catch {
     res.status(404).json({ ok: false, message: "Activo no encontrado o error en actualización." });
@@ -157,8 +167,99 @@ export async function remove(req: Request, res: Response): Promise<void> {
       }
     });
 
+    sseManager.broadcast("activo_cambiado", { id, action: "decommission" });
+    notificationService.notifyAssetCreatedOrDecommissioned(id, 'decommissioned');
     res.json({ ok: true, message: "Activo dado de baja con firma digital." });
   } catch {
     res.status(500).json({ ok: false, message: "Error al dar de baja el activo." });
+  }
+}
+
+export async function getIndividualReport(req: Request, res: Response): Promise<void> {
+  const id = Number(req.params.id);
+  try {
+    const asset = await prisma.activo.findUnique({
+      where: { id },
+      include: { tipo: true, marca: true, lugar: true }
+    });
+    if (!asset) {
+      res.status(404).json({ ok: false, message: "Activo no encontrado." });
+      return;
+    }
+
+    const movements = await prisma.movimiento.findMany({
+      where: { activo_id: id },
+      include: { lugarOrigen: true, lugarDestino: true, estadoMovimiento: true },
+      orderBy: { fecha_movimiento: "asc" }
+    });
+
+    const formattedMovements = movements.map(mov => ({
+      ...mov,
+      lugar_origen: mov.lugarOrigen,
+      lugar_destino: mov.lugarDestino,
+      estado_movimiento: mov.estadoMovimiento
+    }));
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=activo-${asset.codigo}.pdf`);
+
+    generateAssetCertificate(res, asset, formattedMovements);
+
+    const authReq = req as AuthRequest;
+    if (authReq.user?.sub) {
+      notificationService.notifyPdfDownloaded(authReq.user.sub, "Activo Individual", asset.codigo);
+    }
+  } catch (error) {
+    res.status(500).json({ ok: false, message: "Error al generar el PDF del activo." });
+  }
+}
+
+export async function getSummaryReport(req: Request, res: Response): Promise<void> {
+  const { lugar_id, estado, fecha_inicio, fecha_fin } = req.query;
+  try {
+    const where: any = {};
+    if (lugar_id) {
+      where.lugar_id = Number(lugar_id);
+    }
+    if (estado !== undefined && estado !== "") {
+      where.estado = estado === "true" || estado === "1";
+    }
+    if (fecha_inicio || fecha_fin) {
+      where.fecha_registro = {};
+      if (fecha_inicio) where.fecha_registro.gte = new Date(fecha_inicio as string);
+      if (fecha_fin) where.fecha_registro.lte = new Date(fecha_fin as string);
+    }
+
+    const list = await prisma.activo.findMany({
+      where,
+      include: { tipo: true, marca: true, lugar: true },
+      orderBy: { id: "asc" }
+    });
+
+    let lugarName = "Todas";
+    if (lugar_id) {
+      const l = await prisma.lugar.findUnique({ where: { id: Number(lugar_id) } });
+      if (l) lugarName = l.nombre;
+    }
+
+    const filters = {
+      lugar: lugarName,
+      estado: estado === "true" ? "Disponible" : estado === "false" ? "De Baja" : "Todos",
+      fechaRange: (fecha_inicio || fecha_fin)
+        ? `${fecha_inicio || ""} a ${fecha_fin || ""}`
+        : "Histórico"
+    };
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline; filename=reporte-activos.pdf");
+
+    generateAssetSummary(res, list, filters);
+
+    const authReq = req as AuthRequest;
+    if (authReq.user?.sub) {
+      notificationService.notifyPdfDownloaded(authReq.user.sub, "Reporte de Activos", `Ubicación: ${filters.lugar}, Estado: ${filters.estado}`);
+    }
+  } catch (error) {
+    res.status(500).json({ ok: false, message: "Error al generar el reporte de activos." });
   }
 }

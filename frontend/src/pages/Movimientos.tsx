@@ -13,6 +13,7 @@ import {
 import type { Movimiento, Activo, Lugar, Usuario, ResponsableLugar } from "../types";
 import { AxiosError } from "axios";
 import { FiX, FiShield, FiGrid, FiClock, FiCheckCircle, FiMapPin, FiInfo, FiPlus, FiTag, FiCalendar, FiFileText, FiUser, FiSettings, FiAlertCircle } from "react-icons/fi";
+import { useAuth } from "../context/AuthContext";
 
 interface SelectOption {
   value: number;
@@ -20,9 +21,15 @@ interface SelectOption {
 }
 
 export default function Movimientos() {
+  const { token } = useAuth();
   const [data, setData] = useState<Movimiento[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMov, setSelectedMov] = useState<Movimiento | null>(null);
+
+  // Filters for PDF Report
+  const [filterFechaInicio, setFilterFechaInicio] = useState("");
+  const [filterFechaFin, setFilterFechaFin] = useState("");
+  const [filterEstado, setFilterEstado] = useState("");
   const [signing, setSigning] = useState(false);
   const [signingEmisor, setSigningEmisor] = useState(false);
 
@@ -79,6 +86,41 @@ export default function Movimientos() {
   useEffect(() => {
     load();
   }, []);
+
+  // SSE listening
+  useEffect(() => {
+    if (!token) return;
+
+    const sse = new EventSource(`http://localhost:3000/api/realtime/stream?token=${token}`);
+    
+    sse.addEventListener("movimiento_cambiado", () => {
+      console.log("[SSE] Movimiento cambiado recibido. Recargando...");
+      load();
+    });
+
+    sse.addEventListener("activo_cambiado", () => {
+      console.log("[SSE] Activo cambiado recibido. Recargando...");
+      load();
+    });
+
+    sse.onerror = (err) => {
+      console.error("[SSE] Error de conexión en Movimientos:", err);
+    };
+
+    return () => {
+      sse.close();
+    };
+  }, [token]);
+
+  const handleDownloadReport = () => {
+    const params = new URLSearchParams();
+    if (filterFechaInicio) params.append("fecha_inicio", filterFechaInicio);
+    if (filterFechaFin) params.append("fecha_fin", filterFechaFin);
+    if (filterEstado) params.append("estado_id", filterEstado);
+    params.append("token", token || "");
+
+    window.open(`http://localhost:3000/api/movimientos/reporte?${params.toString()}&_cb=${Date.now()}`, "_blank");
+  };
 
   const handleDelete = async (id: number | string) => {
     if (!confirm("¿Eliminar este registro de movimiento?")) return;
@@ -290,6 +332,48 @@ export default function Movimientos() {
         </button>
       </div>
 
+      {/* Barra de Filtros y Reportes */}
+      <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-4 flex flex-wrap gap-4 items-end justify-between backdrop-blur-xl mb-6">
+        <div className="flex flex-wrap gap-4 flex-1">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-slate-450">Estado</span>
+            <select
+              value={filterEstado}
+              onChange={(e) => setFilterEstado(e.target.value)}
+              className="bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 min-w-[150px] outline-none"
+            >
+              <option value="">Todos</option>
+              <option value="1">En Proceso</option>
+              <option value="2">Ejecutado</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-slate-450">Fecha Inicio</span>
+            <input
+              type="date"
+              value={filterFechaInicio}
+              onChange={(e) => setFilterFechaInicio(e.target.value)}
+              className="bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 outline-none"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-slate-450">Fecha Fin</span>
+            <input
+              type="date"
+              value={filterFechaFin}
+              onChange={(e) => setFilterFechaFin(e.target.value)}
+              className="bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 outline-none"
+            />
+          </div>
+        </div>
+        <button
+          onClick={handleDownloadReport}
+          className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-sm font-semibold transition-all border border-white/10 cursor-pointer"
+        >
+          Generar PDF Consolidado
+        </button>
+      </div>
+
       <DataTable<Movimiento>
         columns={[
           { key: "codigo_movimiento", label: "Código" },
@@ -358,22 +442,32 @@ export default function Movimientos() {
           },
           {
             key: "qr_firma",
-            label: "Acciones Firma",
+            label: "Acciones Firma / PDF",
             render: (_, item) => {
-              if (item.estado_movimiento_id === 2) {
-                return (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <FiShield size={12} /> Ejecutado
-                  </span>
-                );
-              }
+              const showPanelButton = item.estado_movimiento_id !== 2;
               return (
-                <button
-                  onClick={() => setSelectedMov(item)}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-500/20 transition-all cursor-pointer"
-                >
-                  <FiGrid size={13} /> Panel Firmas
-                </button>
+                <div className="flex gap-2">
+                  {showPanelButton ? (
+                    <button
+                      onClick={() => setSelectedMov(item)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-500/20 transition-all cursor-pointer"
+                    >
+                      <FiGrid size={13} /> Panel Firmas
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <FiShield size={12} /> Ejecutado
+                    </span>
+                  )}
+                  {item.contrato_uuid && (
+                    <button
+                      onClick={() => window.open(`http://localhost:3000/api/movimientos/${item.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-500/20 transition-all cursor-pointer"
+                    >
+                      Contrato PDF
+                    </button>
+                  )}
+                </div>
               );
             },
           },
@@ -549,9 +643,9 @@ export default function Movimientos() {
       {/* MODAL PANEL DE DOBLE FIRMA */}
       {selectedMov && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
-          <div className="relative w-full max-w-lg bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/10 animate-in fade-in zoom-in-95 duration-150 text-slate-100">
+          <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/10 animate-in fade-in zoom-in-95 duration-150 text-slate-100">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/5">
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/5 shrink-0">
               <div>
                 <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
                   <FiShield className="text-indigo-400" /> Panel de Doble Firma
@@ -566,7 +660,7 @@ export default function Movimientos() {
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
               {/* Info del movimiento */}
               <div className="bg-slate-950/50 border border-white/5 rounded-2xl p-4 text-xs text-slate-350 space-y-1.5">
                 <p className="flex items-center gap-1.5"><strong className="text-slate-200">Activo:</strong> {selectedMov.activo_nombre}</p>
@@ -744,12 +838,20 @@ export default function Movimientos() {
                 <p>El movimiento se marcará como <strong>Ejecutado</strong> automáticamente cuando ambas firmas estén completas. El activo será trasladado al destino.</p>
               </div>
 
-              <button
-                onClick={() => setSelectedMov(null)}
-                className="w-full py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                Cerrar
-              </button>
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => window.open(`http://localhost:3000/api/movimientos/${selectedMov.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
+                  className="flex-1 py-2.5 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-400 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Descargar Contrato PDF
+                </button>
+                <button
+                  onClick={() => setSelectedMov(null)}
+                  className="px-6 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-350 border border-white/5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
         </div>

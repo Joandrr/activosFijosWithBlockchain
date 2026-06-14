@@ -12,14 +12,20 @@ export interface AuthRequest extends Request {
 }
 
 export function authenticate(req: AuthRequest, res: Response, next: NextFunction): void {
-  const authHeader = req.headers["authorization"];
+  let token: string | undefined;
 
-  if (!authHeader?.startsWith("Bearer ")) {
+  const authHeader = req.headers["authorization"];
+  if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.slice(7);
+  } else if (req.query.token) {
+    token = req.query.token as string;
+  }
+
+  if (!token) {
+    console.log("[Auth Middleware] Token not found! Path:", req.path, "Headers:", req.headers, "Query:", req.query);
     res.status(401).json({ ok: false, message: "Token no proporcionado." });
     return;
   }
-
-  const token = authHeader.slice(7);
 
   try {
     const payload = verifyToken(token);
@@ -30,7 +36,8 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
       nombre: String(payload["nombre"] ?? ""),
     };
     next();
-  } catch {
+  } catch (error: any) {
+    console.log("[Auth Middleware] Token verification failed! Token:", token, "Error:", error?.message || error);
     res.status(401).json({ ok: false, message: "Token inválido o expirado." });
   }
 }

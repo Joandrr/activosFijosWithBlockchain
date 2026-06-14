@@ -43,6 +43,29 @@ export async function createNotaryContract(title: string, payload: any): Promise
 }
 
 /**
+ * Obtiene un contrato existente del servicio Go Notary.
+ */
+export async function getNotaryContract(contractId: string): Promise<ContractResponse | null> {
+  try {
+    const response = await fetch(`${NOTARY_SERVICE_URL}/contracts/${contractId}`);
+    if (!response.ok) {
+      console.error("❌ Error al obtener contrato notarial:", response.statusText);
+      return null;
+    }
+    const data = await response.json() as any;
+    return {
+      contract_id: data.id,
+      document_hash: data.document_hash,
+      digital_signature: data.digital_signature,
+      status: data.status,
+    };
+  } catch (error) {
+    console.error("❌ Error de comunicación con service-go en getNotaryContract:", error);
+    return null;
+  }
+}
+
+/**
  * Añade una firma a un contrato existente en el servicio Go Notary.
  */
 export async function signNotaryContract(

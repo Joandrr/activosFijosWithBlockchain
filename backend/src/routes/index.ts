@@ -14,6 +14,7 @@ import { usuarioRouter } from "./usuario.routes.js";
 import { rolRouter } from "./rol.routes.js";
 import { permisoRouter } from "./permiso.routes.js";
 import { responsableLugarRouter } from "./responsable_lugar.routes.js";
+import { realtimeRouter } from "./realtime.routes.js";
 
 export const router = Router();
 
@@ -32,3 +33,4 @@ router.use("/usuarios", usuarioRouter);
 router.use("/roles", rolRouter);
 router.use("/permisos", permisoRouter);
 router.use("/responsables-lugar", responsableLugarRouter);
+router.use("/realtime", realtimeRouter);

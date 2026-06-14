@@ -5,6 +5,7 @@ import { activoService, movimientoService, signReceptor, tipoService, marcaServi
 import type { Activo, Movimiento, Tipo, Marca, Lugar } from "../types";
 import { AxiosError } from "axios";
 import { FiX, FiActivity, FiShield, FiUser, FiCalendar, FiClock, FiAlertCircle, FiPlus, FiTag, FiImage, FiSettings, FiGlobe, FiMapPin } from "react-icons/fi";
+import { useAuth } from "../context/AuthContext";
 
 interface SelectOption {
   value: number;
@@ -12,11 +13,18 @@ interface SelectOption {
 }
 
 export default function Activos() {
+  const { token } = useAuth();
   const [data, setData] = useState<Activo[]>([]);
   const [movements, setMovements] = useState<Movimiento[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<Activo | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingMovementId, setSigningMovementId] = useState<number | null>(null);
+
+  // Filters for PDF Report
+  const [filterLugar, setFilterLugar] = useState("");
+  const [filterEstado, setFilterEstado] = useState("");
+  const [filterFechaInicio, setFilterFechaInicio] = useState("");
+  const [filterFechaFin, setFilterFechaFin] = useState("");
 
   // Modal form states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -63,6 +71,42 @@ export default function Activos() {
   useEffect(() => {
     load();
   }, []);
+
+  // SSE listening
+  useEffect(() => {
+    if (!token) return;
+
+    const sse = new EventSource(`http://localhost:3000/api/realtime/stream?token=${token}`);
+    
+    sse.addEventListener("activo_cambiado", () => {
+      console.log("[SSE] Activo cambiado recibido. Recargando listado...");
+      load();
+    });
+
+    sse.addEventListener("movimiento_cambiado", () => {
+      console.log("[SSE] Movimiento cambiado recibido. Recargando listado...");
+      load();
+    });
+
+    sse.onerror = (err) => {
+      console.error("[SSE] Error en conexión en Activos:", err);
+    };
+
+    return () => {
+      sse.close();
+    };
+  }, [token]);
+
+  const handleDownloadReport = () => {
+    const params = new URLSearchParams();
+    if (filterLugar) params.append("lugar_id", filterLugar);
+    if (filterEstado) params.append("estado", filterEstado);
+    if (filterFechaInicio) params.append("fecha_inicio", filterFechaInicio);
+    if (filterFechaFin) params.append("fecha_fin", filterFechaFin);
+    params.append("token", token || "");
+
+    window.open(`http://localhost:3000/api/activos/reporte?${params.toString()}&_cb=${Date.now()}`, "_blank");
+  };
 
   const handleDelete = async (id: number | string) => {
     if (!confirm("¿Dar de baja este activo con firma digital?")) return;
@@ -165,6 +209,61 @@ export default function Activos() {
         </button>
       </div>
 
+      {/* Barra de Filtros y Reportes */}
+      <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-4 flex flex-wrap gap-4 items-end justify-between backdrop-blur-xl mb-6">
+        <div className="flex flex-wrap gap-4 flex-1">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-slate-450">Ubicación</span>
+            <select
+              value={filterLugar}
+              onChange={(e) => setFilterLugar(e.target.value)}
+              className="bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 min-w-[150px] outline-none"
+            >
+              <option value="">Todas</option>
+              {lugarOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-slate-450">Estado</span>
+            <select
+              value={filterEstado}
+              onChange={(e) => setFilterEstado(e.target.value)}
+              className="bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 min-w-[120px] outline-none"
+            >
+              <option value="">Todos</option>
+              <option value="true">Disponible</option>
+              <option value="false">De Baja</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-slate-450">Fecha Inicio</span>
+            <input
+              type="date"
+              value={filterFechaInicio}
+              onChange={(e) => setFilterFechaInicio(e.target.value)}
+              className="bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 outline-none"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-slate-450">Fecha Fin</span>
+            <input
+              type="date"
+              value={filterFechaFin}
+              onChange={(e) => setFilterFechaFin(e.target.value)}
+              className="bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 outline-none"
+            />
+          </div>
+        </div>
+        <button
+          onClick={handleDownloadReport}
+          className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-sm font-semibold transition-all border border-white/10 cursor-pointer"
+        >
+          Generar PDF Consolidado
+        </button>
+      </div>
+
       <DataTable<Activo>
         columns={[
           { key: "codigo", label: "Código" },
@@ -196,14 +295,22 @@ export default function Activos() {
           },
           {
             key: "historial",
-            label: "Historial",
+            label: "Acciones Ficha",
             render: (_, item) => (
-              <button
-                onClick={() => setSelectedAsset(item)}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-              >
-                <FiActivity size={12} /> Ver Ciclo
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedAsset(item)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                >
+                  <FiActivity size={12} /> Ver Ciclo
+                </button>
+                <button
+                  onClick={() => window.open(`http://localhost:3000/api/activos/${item.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                >
+                  Ficha PDF
+                </button>
+              </div>
             ),
           },
         ]}
@@ -517,7 +624,13 @@ export default function Activos() {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-slate-950/30 border-t border-white/5 flex justify-end">
+            <div className="px-6 py-4 bg-slate-950/30 border-t border-white/5 flex justify-between items-center">
+              <button
+                onClick={() => window.open(`http://localhost:3000/api/activos/${selectedAsset.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
+                className="px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 rounded-xl text-sm font-semibold text-indigo-400 transition-colors shadow-sm cursor-pointer"
+              >
+                Descargar Ficha PDF
+              </button>
               <button
                 onClick={() => setSelectedAsset(null)}
                 className="px-4 py-2 bg-slate-900 border border-white/10 hover:bg-white/5 rounded-xl text-sm font-semibold text-slate-300 transition-colors shadow-sm cursor-pointer"

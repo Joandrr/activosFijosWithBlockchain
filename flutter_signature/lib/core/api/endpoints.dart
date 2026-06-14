@@ -1,5 +1,5 @@
 class Endpoints {
-  static const baseUrl = 'http://192.168.0.18:3000/api';
+  static const baseUrl = 'http://192.168.0.7:3000/api';
 
   static const login = '/auth/login';
   static const register = '/auth/register';
@@ -11,4 +11,6 @@ class Endpoints {
   static String signEmisor(int id) => '/movimientos/$id/sign-emisor';
   static String signReceptor(int id) => '/movimientos/$id/sign-receptor';
   static String movimientoById(int id) => '/movimientos/$id';
+  static const activos = '/activos';
+  static String activoById(int id) => '/activos/$id';
 }

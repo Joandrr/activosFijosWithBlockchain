@@ -41,6 +41,8 @@ dependencies:
   signature: ^6.3.0
   app_links: ^7.1.2
   path_provider: ^2.1.5
+  url_launcher: ^6.2.5
+  flutter_client_sse: ^2.0.3
 
 dev_dependencies:
   flutter_test:

@@ -1,10 +1,37 @@
 import type { Request, Response } from "express";
 import { prisma } from "../config/db.js";
 import { getNextId } from "../utils/db.js";
-import { createNotaryContract, signNotaryContract } from "../utils/notary.js";
+import { createNotaryContract, signNotaryContract, getNotaryContract } from "../utils/notary.js";
+import type { AuthRequest } from "../middlewares/auth.middleware.js";
+import { generateMovementCertificate, generateMovementSummary } from "../utils/pdfGenerator.js";
+import { sseManager } from "../utils/sseManager.js";
+import { notificationService } from "../services/notification.service.js";
 
 export async function getAll(_req: Request, res: Response): Promise<void> {
+  const req = _req as AuthRequest;
+  const user = req.user;
+
+  let whereClause = {};
+
+  if (user && user.rol_id !== 1) {
+    // Buscar los laboratorios/lugares bajo su responsabilidad
+    const responsibilities = await prisma.responsableLugar.findMany({
+      where: { usuario_id: user.sub },
+      select: { lugar_id: true }
+    });
+    const placeIds = responsibilities.map(r => r.lugar_id).filter((id): id is number => id !== null);
+
+    whereClause = {
+      OR: [
+        { usuario_id: user.sub },
+        { lugar_origen_id: { in: placeIds } },
+        { lugar_destino_id: { in: placeIds } }
+      ]
+    };
+  }
+
   const list = await prisma.movimiento.findMany({
+    where: whereClause,
     include: {
       estadoMovimiento: true,
       estadoActivo: true,
@@ -70,11 +97,6 @@ export async function create(req: Request, res: Response): Promise<void> {
 
   if (contract) {
     contrato_uuid = contract.contract_id;
-    // Firmar la creación inmediatamente como Auxiliar Emisor
-    const signed = await signNotaryContract(contract.contract_id, "Auxiliar Emisor", contract.document_hash, "emision");
-    if (signed) {
-      firma_emisor = contract.digital_signature;
-    }
   }
 
   const created = await prisma.movimiento.create({
@@ -98,6 +120,8 @@ export async function create(req: Request, res: Response): Promise<void> {
     ...created,
     fecha_movimiento: created.fecha_movimiento.toISOString().split("T")[0]
   };
+  sseManager.broadcast("movimiento_cambiado", { id: created.id, action: "create" });
+  notificationService.notifyMovementCreated(created.id);
   res.status(201).json({ ok: true, data });
 }
 
@@ -124,6 +148,7 @@ export async function update(req: Request, res: Response): Promise<void> {
       ...updated,
       fecha_movimiento: updated.fecha_movimiento.toISOString().split("T")[0]
     };
+    sseManager.broadcast("movimiento_cambiado", { id: updated.id, action: "update" });
     res.json({ ok: true, data });
   } catch {
     res.status(404).json({ ok: false, message: "Movimiento no encontrado." });
@@ -167,10 +192,12 @@ export async function signReceptor(req: Request, res: Response): Promise<void> {
 
     // Registrar firma en el servicio Go Notary
     if (movimiento.contrato_uuid) {
+      const contract = await getNotaryContract(movimiento.contrato_uuid);
+      const docHash = contract?.document_hash || "movimiento_document_hash";
       const signed = await signNotaryContract(
         movimiento.contrato_uuid,
         "Auxiliar Receptor",
-        movimiento.firma_emisor || "movimiento_firma_emisor",
+        docHash,
         "recepcion"
       );
       if (signed) {
@@ -207,6 +234,9 @@ export async function signReceptor(req: Request, res: Response): Promise<void> {
         fecha_movimiento: updated.fecha_movimiento.toISOString().split("T")[0]
       }
     });
+    sseManager.broadcast("movimiento_cambiado", { id: updated.id, action: "sign_receptor" });
+    sseManager.broadcast("activo_cambiado", { id: movimiento.activo_id, action: "update" });
+    notificationService.notifyMovementSigned(updated.id, 'receptor');
   } catch (error) {
     console.error("❌ Error en signReceptor:", error);
     res.status(500).json({ ok: false, message: "Error al registrar la firma del receptor." });
@@ -255,7 +285,9 @@ export async function signEmisor(req: Request, res: Response): Promise<void> {
       }
     } else {
       // Firmar sobre contrato existente
-      const signed = await signNotaryContract(contrato_uuid, "Auxiliar Emisor", movimiento.firma_emisor || "hash_emision", "emision");
+      const contract = await getNotaryContract(contrato_uuid);
+      const docHash = contract?.document_hash || "hash_emision";
+      const signed = await signNotaryContract(contrato_uuid, "Auxiliar Emisor", docHash, "emision");
       if (signed) {
         firma_emisor = "Firma_Emisor_Auxiliar_Verificada";
       }
@@ -269,7 +301,7 @@ export async function signEmisor(req: Request, res: Response): Promise<void> {
       where: { id },
       data: {
         firma_emisor,
-        contrato_uuid: contrato_uuid ?? undefined,
+        contrato_uuid: contrato_uuid ?? null,
         estado_movimiento_id: 1 // Sigue En Proceso — falta firma del receptor
       }
     });
@@ -282,8 +314,109 @@ export async function signEmisor(req: Request, res: Response): Promise<void> {
         fecha_movimiento: updated.fecha_movimiento.toISOString().split("T")[0]
       }
     });
+    sseManager.broadcast("movimiento_cambiado", { id: updated.id, action: "sign_emisor" });
+    notificationService.notifyMovementSigned(updated.id, 'emisor');
   } catch (error) {
     console.error("❌ Error en signEmisor:", error);
     res.status(500).json({ ok: false, message: "Error al registrar la firma del emisor." });
+  }
+}
+
+export async function getIndividualReport(req: Request, res: Response): Promise<void> {
+  const id = Number(req.params.id);
+  try {
+    const movement = await prisma.movimiento.findUnique({
+      where: { id },
+      include: {
+        activo: true,
+        lugarOrigen: true,
+        lugarDestino: true,
+        estadoMovimiento: true,
+        usuario: true
+      }
+    });
+
+    if (!movement) {
+      res.status(404).json({ ok: false, message: "Movimiento no encontrado." });
+      return;
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=contrato-traslado-${movement.codigo_movimiento}.pdf`);
+
+    const formattedMovement = {
+      ...movement,
+      lugar_origen: movement.lugarOrigen,
+      lugar_destino: movement.lugarDestino,
+      estado_movimiento: movement.estadoMovimiento
+    };
+
+    generateMovementCertificate(res, formattedMovement);
+
+    const authReq = req as AuthRequest;
+    if (authReq.user?.sub) {
+      notificationService.notifyPdfDownloaded(authReq.user.sub, "Contrato de Traslado", movement.codigo_movimiento);
+    }
+  } catch (error) {
+    res.status(500).json({ ok: false, message: "Error al generar el reporte del movimiento." });
+  }
+}
+
+export async function getSummaryReport(req: Request, res: Response): Promise<void> {
+  const { fecha_inicio, fecha_fin, estado_id } = req.query;
+  try {
+    const where: any = {};
+    if (estado_id) {
+      where.estado_movimiento_id = Number(estado_id);
+    }
+    if (fecha_inicio || fecha_fin) {
+      where.fecha_movimiento = {};
+      if (fecha_inicio) where.fecha_movimiento.gte = new Date(fecha_inicio as string);
+      if (fecha_fin) where.fecha_movimiento.lte = new Date(fecha_fin as string);
+    }
+
+    const list = await prisma.movimiento.findMany({
+      where,
+      include: {
+        activo: true,
+        lugarOrigen: true,
+        lugarDestino: true,
+        estadoMovimiento: true,
+        usuario: true
+      },
+      orderBy: { id: "asc" }
+    });
+
+    const formattedList = list.map(item => ({
+      ...item,
+      lugar_origen: item.lugarOrigen,
+      lugar_destino: item.lugarDestino,
+      estado_movimiento: item.estadoMovimiento
+    }));
+
+    let estadoLabel = "Todos";
+    if (estado_id) {
+      const est = await prisma.estadoMovimiento.findUnique({ where: { id: Number(estado_id) } });
+      if (est) estadoLabel = est.nombre;
+    }
+
+    const filters = {
+      estado: estadoLabel,
+      fechaRange: (fecha_inicio || fecha_fin)
+        ? `${fecha_inicio || ""} a ${fecha_fin || ""}`
+        : "Todos"
+    };
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline; filename=reporte-traslados.pdf");
+
+    generateMovementSummary(res, formattedList, filters);
+
+    const authReq = req as AuthRequest;
+    if (authReq.user?.sub) {
+      notificationService.notifyPdfDownloaded(authReq.user.sub, "Reporte de Traslados", `Estado: ${filters.estado}, Rango: ${filters.fechaRange}`);
+    }
+  } catch (error) {
+    res.status(500).json({ ok: false, message: "Error al generar el reporte general de movimientos." });
   }
 }
