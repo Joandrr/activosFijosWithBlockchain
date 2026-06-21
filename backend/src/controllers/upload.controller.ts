@@ -56,8 +56,9 @@ export async function uploadImage(req: Request, res: Response): Promise<void> {
 
 export async function serveImage(req: Request, res: Response): Promise<void> {
   try {
-    // Express wildcard (*) puts the rest of the path under req.params[0]
-    const key = req.params[0];
+    // Express named parameter key (supports wildcard /image/:key(.*))
+    const rawKey = req.params.key || req.params[0];
+    const key = (Array.isArray(rawKey) ? rawKey.join("/") : rawKey) as string;
     if (!key) {
       res.status(400).json({ error: "Falta especificar la clave de la imagen." });
       return;
