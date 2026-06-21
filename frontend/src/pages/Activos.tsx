@@ -6,6 +6,7 @@ import type { Activo, Movimiento, Tipo, Marca, Lugar } from "../types";
 import { AxiosError } from "axios";
 import { FiX, FiActivity, FiShield, FiUser, FiCalendar, FiClock, FiAlertCircle, FiPlus, FiTag, FiImage, FiSettings, FiGlobe, FiMapPin } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -41,6 +42,32 @@ export default function Activos() {
     lugar_id: ""
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await api.post("/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      if (res.data?.data?.url) {
+        setForm(prev => ({ ...prev, urlImagen: res.data.data.url }));
+      }
+    } catch (err) {
+      console.error("Error al subir imagen:", err);
+      alert("Error al subir la imagen a S3.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // Dropdown options
   const [tipoOptions, setTipoOptions] = useState<SelectOption[]>([]);
@@ -372,15 +399,40 @@ export default function Activos() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-350 mb-1.5 flex items-center gap-1.5">
-                  <FiImage className="text-indigo-400" /> URL Imagen
+                  <FiImage className="text-indigo-400" /> Imagen del Activo
                 </label>
-                <input
-                  type="text"
-                  value={form.urlImagen}
-                  onChange={(e) => setForm({ ...form, urlImagen: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full px-3.5 py-2.5 bg-slate-955/40 border border-white/10 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                />
+                <div className="flex flex-col gap-3">
+                  {!form.urlImagen ? (
+                    <div className="flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/10 rounded-xl cursor-pointer hover:bg-white/5 transition-all">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <FiImage className="w-8 h-8 text-slate-500 mb-2" />
+                          <p className="text-sm text-slate-400">
+                            {uploading ? "Subiendo a AWS S3..." : "Selecciona una imagen (.png, .jpg)"}
+                          </p>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploading}
+                          onChange={handleImageUpload}
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-white/10 group">
+                      <img src={form.urlImagen} alt="Vista previa del activo" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, urlImagen: "" })}
+                        className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-rose-400 font-bold text-xs transition-opacity cursor-pointer"
+                      >
+                        Eliminar Imagen
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
