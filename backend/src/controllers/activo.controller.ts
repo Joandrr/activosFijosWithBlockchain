@@ -7,13 +7,35 @@ import { sseManager } from "../utils/sseManager.js";
 import { notificationService } from "../services/notification.service.js";
 import type { AuthRequest } from "../middlewares/auth.middleware.js";
 
-export async function getAll(_req: Request, res: Response): Promise<void> {
+function formatImageUrl(req: Request, urlImagen?: string | null): string {
+  if (!urlImagen) return "";
+  if (urlImagen.includes("amazonaws.com") && urlImagen.includes("/activos/")) {
+    const keyIndex = urlImagen.indexOf("/activos/");
+    if (keyIndex !== -1) {
+      const key = urlImagen.substring(keyIndex + 1);
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+      const host = req.headers["x-forwarded-host"] || req.get("host");
+      
+      let baseUrl = `${protocol}://${host}`;
+      if (process.env.BACKEND_URL) {
+        baseUrl = process.env.BACKEND_URL.endsWith("/")
+          ? process.env.BACKEND_URL.slice(0, -1)
+          : process.env.BACKEND_URL;
+      }
+      return `${baseUrl}/api/upload/image/${key}`;
+    }
+  }
+  return urlImagen;
+}
+
+export async function getAll(req: Request, res: Response): Promise<void> {
   const list = await prisma.activo.findMany({
     include: { tipo: true, marca: true, lugar: true },
     orderBy: { id: "asc" }
   });
   const data = list.map(item => ({
     ...item,
+    urlImagen: formatImageUrl(req, item.urlImagen),
     fecha_registro: item.fecha_registro.toISOString().split("T")[0],
     tipo_nombre: item.tipo?.nombre ?? null,
     marca_nombre: item.marca?.nombre ?? null,
@@ -31,6 +53,7 @@ export async function getById(req: Request, res: Response): Promise<void> {
   if (!item) { res.status(404).json({ ok: false, message: "Activo no encontrado." }); return; }
   const data = {
     ...item,
+    urlImagen: formatImageUrl(req, item.urlImagen),
     fecha_registro: item.fecha_registro.toISOString().split("T")[0],
     tipo_nombre: item.tipo?.nombre ?? null,
     marca_nombre: item.marca?.nombre ?? null,
@@ -79,6 +102,7 @@ export async function create(req: Request, res: Response): Promise<void> {
   
   const data = {
     ...created,
+    urlImagen: formatImageUrl(req, created.urlImagen),
     fecha_registro: created.fecha_registro.toISOString().split("T")[0]
   };
   sseManager.broadcast("activo_cambiado", { id: created.id, action: "create" });
@@ -123,6 +147,7 @@ export async function update(req: Request, res: Response): Promise<void> {
     });
     const data = {
       ...updated,
+      urlImagen: formatImageUrl(req, updated.urlImagen),
       fecha_registro: updated.fecha_registro.toISOString().split("T")[0]
     };
     sseManager.broadcast("activo_cambiado", { id: updated.id, action: "update" });

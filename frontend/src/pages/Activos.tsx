@@ -10,6 +10,41 @@ import api from "../services/api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+const getFullImageUrl = (url?: string | null) => {
+  if (!url) return "";
+  
+  // If the URL contains an AWS S3 reference, extract the key and use the proxy
+  if (url.includes("amazonaws.com") && url.includes("/activos/")) {
+    const idx = url.indexOf("/activos/");
+    if (idx !== -1) {
+      const key = url.substring(idx + 1); // "activos/img-..."
+      return `${API_URL}/api/upload/image/${key}`;
+    }
+  }
+
+  // If it is a proxy URL but pointing to another host (like localhost from database, or old domain),
+  // map it to the current API_URL
+  if (url.includes("/api/upload/image/")) {
+    const idx = url.indexOf("/api/upload/image/");
+    if (idx !== -1) {
+      const path = url.substring(idx); // "/api/upload/image/activos/img-..."
+      return `${API_URL}${path}`;
+    }
+  }
+
+  // If it's already a relative path starting with /api/upload/image, prepend API_URL
+  if (url.startsWith("/api/upload/image/")) {
+    return `${API_URL}${url}`;
+  }
+
+  // If it's any other relative path, prepend API_URL
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    return `${API_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+  }
+
+  return url;
+};
+
 interface SelectOption {
   value: number;
   label: string;
@@ -429,7 +464,7 @@ export default function Activos() {
                     </div>
                   ) : (
                     <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-white/10 group">
-                      <img src={form.urlImagen} alt="Vista previa del activo" className="w-full h-full object-cover" />
+                      <img src={getFullImageUrl(form.urlImagen)} alt="Vista previa del activo" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setForm({ ...form, urlImagen: "" })}
@@ -705,8 +740,8 @@ export default function Activos() {
 
       {/* MODAL DE DETALLE DEL ACTIVO (PREMIUM DESIGN) */}
       {detailAsset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
-          <div className="relative w-full max-w-lg bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/10 text-slate-100 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/10 text-slate-100 animate-in fade-in zoom-in-95 duration-150 my-auto">
             {/* Modal Header */}
             <div className="px-6 py-5 bg-gradient-to-r from-slate-950 to-indigo-950/80 text-white flex items-center justify-between border-b border-white/5">
               <div>
@@ -722,61 +757,72 @@ export default function Activos() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-6">
-              {/* Imagen Grande */}
-              <div className="flex items-center justify-center bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5 h-64 w-full shadow-inner relative group">
-                {detailAsset.urlImagen ? (
-                  <img
-                    src={detailAsset.urlImagen}
-                    alt={detailAsset.nombre}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center text-slate-500">
-                    <FiImage size={48} className="text-slate-500 mb-2" />
-                    <span className="text-sm font-medium">Sin imagen registrada</span>
+            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Columna Izquierda: Imagen */}
+                <div className="flex flex-col space-y-2">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Imagen del Activo</span>
+                  <div className="flex items-center justify-center bg-slate-950/40 rounded-2xl overflow-hidden border border-white/10 h-56 w-full shadow-inner relative group">
+                    {detailAsset.urlImagen ? (
+                      <img
+                        src={getFullImageUrl(detailAsset.urlImagen)}
+                        alt={detailAsset.nombre}
+                        className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center text-slate-500">
+                        <FiImage size={40} className="text-slate-500 mb-2" />
+                        <span className="text-xs">Sin imagen</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* Atributos */}
-              <div className="grid grid-cols-2 gap-4 text-sm bg-slate-950/30 p-5 rounded-2xl border border-white/5">
-                <div className="col-span-2 pb-2 border-b border-white/5">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nombre del Activo</span>
-                  <p className="font-bold text-slate-200 text-base mt-0.5">{detailAsset.nombre}</p>
-                </div>
-                <div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Categoría / Tipo</span>
-                  <p className="font-bold text-slate-200 mt-0.5">{detailAsset.tipo_nombre || "No especificado"}</p>
-                </div>
-                <div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fabricante / Marca</span>
-                  <p className="font-bold text-slate-200 mt-0.5">{detailAsset.marca_nombre || "No especificado"}</p>
-                </div>
-                <div className="col-span-2 pt-2 border-t border-white/5">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ubicación Actual</span>
-                  <p className="font-bold text-slate-200 mt-0.5">{detailAsset.lugar_nombre || "No especificado"}</p>
-                </div>
-                <div className="pt-2 border-t border-white/5">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fecha Registro</span>
-                  <p className="font-mono text-slate-300 mt-0.5">{detailAsset.fecha_registro}</p>
-                </div>
-                <div className="pt-2 border-t border-white/5 font-semibold">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Disponibilidad</span>
-                  <p className={`mt-0.5 ${detailAsset.estado ? "text-emerald-400" : "text-rose-400"}`}>
-                    {detailAsset.estado ? "DISPONIBLE" : "DADO DE BAJA"}
-                  </p>
+                {/* Columna Derecha: Atributos en una cuadrícula compacta */}
+                <div className="flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-[10px] font-semibold text-slate-455 uppercase tracking-wider block">Nombre del Activo</span>
+                      <span className="font-bold text-slate-250 text-base">{detailAsset.nombre}</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 text-xs bg-slate-950/20 p-4 rounded-xl border border-white/5">
+                      <div>
+                        <span className="text-[9px] font-semibold text-slate-455 uppercase tracking-wider block">Categoría</span>
+                        <span className="font-bold text-slate-200">{detailAsset.tipo_nombre || "No especificado"}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-semibold text-slate-455 uppercase tracking-wider block">Marca</span>
+                        <span className="font-bold text-slate-200">{detailAsset.marca_nombre || "No especificado"}</span>
+                      </div>
+                      <div className="col-span-2 pt-1.5 border-t border-white/5">
+                        <span className="text-[9px] font-semibold text-slate-455 uppercase tracking-wider block">Ubicación Actual</span>
+                        <span className="font-bold text-slate-200">{detailAsset.lugar_nombre || "No especificado"}</span>
+                      </div>
+                      <div className="pt-1.5 border-t border-white/5">
+                        <span className="text-[9px] font-semibold text-slate-455 uppercase tracking-wider block">Fecha Registro</span>
+                        <span className="font-mono font-semibold text-slate-300">{detailAsset.fecha_registro}</span>
+                      </div>
+                      <div className="pt-1.5 border-t border-white/5">
+                        <span className="text-[9px] font-semibold text-slate-455 uppercase tracking-wider block">Disponibilidad</span>
+                        <span className={`font-bold ${detailAsset.estado ? "text-emerald-400" : "text-rose-400"}`}>
+                          {detailAsset.estado ? "DISPONIBLE" : "DADO DE BAJA"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="flex justify-end pt-2">
-                <button
-                  onClick={() => setDetailAsset(null)}
-                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-semibold transition-colors border border-white/10 cursor-pointer"
-                >
-                  Cerrar Detalles
-                </button>
-              </div>
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-950/30 border-t border-white/5 flex justify-end items-center">
+              <button
+                onClick={() => setDetailAsset(null)}
+                className="px-5 py-2.5 bg-slate-900 border border-white/10 hover:bg-white/5 rounded-xl text-sm font-semibold text-slate-300 transition-colors shadow-sm cursor-pointer"
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         </div>
