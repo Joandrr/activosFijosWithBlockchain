@@ -10,6 +10,8 @@ import Movimientos from "./pages/Movimientos";
 import Administracion from "./pages/Administracion";
 import Usuarios from "./pages/Usuarios";
 import Validador from "./pages/Validador";
+import Manuales from "./pages/Manuales";
+import Chatbot from "./components/Chatbot";
 
 export default function App() {
   return (
@@ -18,6 +20,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/manual" element={<Manuales isPublic={true} />} />
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/activos" element={<Activos />} />
@@ -25,9 +28,11 @@ export default function App() {
             <Route path="/validador" element={<Validador />} />
             <Route path="/administracion" element={<Administracion />} />
             <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/manuales" element={<Manuales />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <Chatbot />
       </AuthProvider>
     </BrowserRouter>
   );

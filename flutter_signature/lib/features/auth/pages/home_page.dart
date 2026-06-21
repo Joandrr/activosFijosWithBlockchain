@@ -206,6 +206,20 @@ class _HomePageState extends State<HomePage> {
                         MaterialPageRoute(builder: (_) => const QrScannerPage()),
                       ),
                     ),
+                    const SizedBox(height: 16),
+
+                    // ASISTENTE DE AYUDA / CHATBOT (Todos)
+                    _buildDashboardCard(
+                      title: 'Asistente de Ayuda (AI)',
+                      description: 'Consulta cómo realizar firmas, busca información en el dataset de 10k activos fijos, y obtén soporte instantáneo.',
+                      gradientColors: [
+                        const Color(0xFF3B0764), // purple-950
+                        const Color(0xFF1E1B4B), // indigo-950
+                      ],
+                      borderColor: const Color(0xFF6B21A8), // purple-800
+                      textColor: const Color(0xFFF3E8FF), // purple-100
+                      onTap: () => Navigator.pushNamed(context, '/chatbot'),
+                    ),
                   ],
                 ),
               ),

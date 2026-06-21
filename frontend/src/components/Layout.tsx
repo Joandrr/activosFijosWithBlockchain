@@ -7,6 +7,7 @@ const nav = [
   { to: "/activos", label: "Activos", icon: "package" },
   { to: "/movimientos", label: "Movimientos", icon: "transfer" },
   { to: "/validador", label: "Validador Notarial", icon: "shield" },
+  { to: "/manuales", label: "Manuales", icon: "book-open" },
   { to: "/administracion", label: "Administración", icon: "settings", adminOnly: true },
   { to: "/usuarios", label: "Usuarios", icon: "users", adminOnly: true },
 ];
@@ -17,6 +18,7 @@ function SvgIcon({ name, className = "w-5 h-5" }: { name: string; className?: st
     "package": "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",
     "transfer": "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4",
     "shield": "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+    "book-open": "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
     "settings": "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z",
     "users": "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z",
     "log-out": "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1",
@@ -39,6 +41,27 @@ export function Layout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem("theme") || "dark";
+    if (saved === "light") {
+      document.body.classList.add("light-theme");
+    } else {
+      document.body.classList.remove("light-theme");
+    }
+    return saved;
+  });
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    localStorage.setItem("theme", nextTheme);
+    if (nextTheme === "light") {
+      document.body.classList.add("light-theme");
+    } else {
+      document.body.classList.remove("light-theme");
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -146,6 +169,23 @@ export function Layout() {
             title={collapsed ? "Expandir menú" : "Colapsar menú"}
           >
             <SvgIcon name={collapsed ? "chevron-right" : "chevron-left"} className="w-5 h-5" />
+          </button>
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer ml-2"
+            title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+          >
+            {theme === "dark" ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
           </button>
 
           <div className="flex items-center gap-3 ml-auto">

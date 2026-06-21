@@ -1,11 +1,32 @@
 import { Link, useNavigate } from "react-router-dom";
 import { FiShield, FiCpu, FiCheckCircle, FiArrowRight, FiUsers } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const { token } = useAuth();
   const navigate = useNavigate();
+
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem("theme") || "dark";
+    if (saved === "light") {
+      document.body.classList.add("light-theme");
+    } else {
+      document.body.classList.remove("light-theme");
+    }
+    return saved;
+  });
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    localStorage.setItem("theme", nextTheme);
+    if (nextTheme === "light") {
+      document.body.classList.add("light-theme");
+    } else {
+      document.body.classList.remove("light-theme");
+    }
+  };
 
   useEffect(() => {
     // If already logged in, let the user navigate directly to dashboard if they want
@@ -30,6 +51,29 @@ export default function Home() {
           </span>
         </div>
         <div className="flex items-center gap-4">
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer mr-1"
+            title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+          >
+            {theme === "dark" ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
+          </button>
+
+          <Link
+            to="/manual"
+            className="px-5 py-2 rounded-xl text-slate-300 font-medium text-sm hover:text-white transition-colors"
+          >
+            Manual de Usuario
+          </Link>
           {token ? (
             <button
               onClick={() => navigate("/dashboard")}
@@ -69,13 +113,21 @@ export default function Home() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
           {token ? (
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold text-base hover:from-indigo-500 hover:to-purple-500 transition-all shadow-xl shadow-indigo-600/25 flex items-center justify-center gap-2 cursor-pointer group"
-            >
-              Entrar al Dashboard
-              <FiArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+            <>
+              <button
+                onClick={() => navigate("/dashboard")}
+                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold text-base hover:from-indigo-500 hover:to-purple-500 transition-all shadow-xl shadow-indigo-600/25 flex items-center justify-center gap-2 cursor-pointer group"
+              >
+                Entrar al Dashboard
+                <FiArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+              <Link
+                to="/manual"
+                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-350 font-semibold text-base border border-white/10 transition-all flex items-center justify-center gap-2"
+              >
+                Ver Manuales
+              </Link>
+            </>
           ) : (
             <>
               <Link
@@ -84,6 +136,12 @@ export default function Home() {
               >
                 Comenzar ahora
                 <FiArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link
+                to="/manual"
+                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-350 font-semibold text-base border border-white/10 transition-all flex items-center justify-center gap-2"
+              >
+                Ver Manuales
               </Link>
             </>
           )}
