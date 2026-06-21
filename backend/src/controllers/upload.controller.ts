@@ -37,10 +37,18 @@ export async function uploadImage(req: Request, res: Response): Promise<void> {
 
     await s3.send(new PutObjectCommand(uploadParams));
 
-    // Construct the backend proxy URL (supports x-forwarded headers for reverse proxies/Azure)
-    const protocol = req.headers["x-forwarded-proto"] || req.protocol;
-    const host = req.headers["x-forwarded-host"] || req.get("host");
-    const fileUrl = `${protocol}://${host}/api/upload/image/${fileName}`;
+    // Construct the backend proxy URL (supports BACKEND_URL env override and x-forwarded headers)
+    let fileUrl = "";
+    if (process.env.BACKEND_URL) {
+      const baseUrl = process.env.BACKEND_URL.endsWith("/")
+        ? process.env.BACKEND_URL.slice(0, -1)
+        : process.env.BACKEND_URL;
+      fileUrl = `${baseUrl}/api/upload/image/${fileName}`;
+    } else {
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+      const host = req.headers["x-forwarded-host"] || req.get("host");
+      fileUrl = `${protocol}://${host}/api/upload/image/${fileName}`;
+    }
 
     res.status(200).json({
       success: true,

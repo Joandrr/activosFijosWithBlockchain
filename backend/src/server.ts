@@ -5,6 +5,7 @@ import { router } from "./routes/index.js";
 import notificationRoutes from './routes/notification.routes.js';
 
 const app = express();
+app.set("trust proxy", true);
 
 app.use(cors());
 app.use(express.json());

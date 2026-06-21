@@ -4,7 +4,7 @@ import DataTable from "../components/DataTable";
 import { activoService, movimientoService, signReceptor, tipoService, marcaService, lugarService } from "../services";
 import type { Activo, Movimiento, Tipo, Marca, Lugar } from "../types";
 import { AxiosError } from "axios";
-import { FiX, FiActivity, FiShield, FiUser, FiCalendar, FiClock, FiAlertCircle, FiPlus, FiTag, FiImage, FiSettings, FiGlobe, FiMapPin } from "react-icons/fi";
+import { FiX, FiActivity, FiShield, FiUser, FiCalendar, FiClock, FiAlertCircle, FiPlus, FiTag, FiImage, FiSettings, FiGlobe, FiMapPin, FiSearch } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
@@ -31,6 +31,7 @@ export default function Activos() {
 
   // Modal form states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [detailAsset, setDetailAsset] = useState<Activo | null>(null);
   const [editId, setEditId] = useState<number | string | null>(null);
   const [form, setForm] = useState({
     codigo: "",
@@ -328,6 +329,12 @@ export default function Activos() {
             render: (_, item) => (
               <div className="flex gap-2">
                 <button
+                  onClick={() => setDetailAsset(item)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                >
+                  <FiSearch size={12} /> Ver Detalle
+                </button>
+                <button
                   onClick={() => setSelectedAsset(item)}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
                 >
@@ -538,41 +545,6 @@ export default function Activos() {
 
             {/* Modal Body / Timeline */}
             <div className="p-6 max-h-[60vh] overflow-y-auto space-y-6">
-              {/* FICHA TÉCNICA DEL ACTIVO CON IMAGEN DE S3 */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-950/40 p-5 rounded-2xl border border-white/5">
-                <div className="md:col-span-1 flex items-center justify-center bg-slate-900 rounded-xl overflow-hidden border border-white/10 h-32 w-full">
-                  {selectedAsset.urlImagen ? (
-                    <img
-                      src={selectedAsset.urlImagen}
-                      alt={selectedAsset.nombre}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center text-slate-500">
-                      <FiImage size={32} />
-                      <span className="text-[10px] mt-1">Sin imagen</span>
-                    </div>
-                  )}
-                </div>
-                <div className="md:col-span-2 space-y-2 text-xs">
-                  <h4 className="font-bold text-slate-200 uppercase tracking-wider text-sm">Ficha Técnica</h4>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                    <div>
-                      <span className="text-slate-450">Categoría / Tipo</span>
-                      <p className="font-bold text-slate-200 mt-0.5">{selectedAsset.tipo_nombre || "No especificado"}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-450">Marca</span>
-                      <p className="font-bold text-slate-200 mt-0.5">{selectedAsset.marca_nombre || "No especificado"}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-slate-450">Ubicación Actual</span>
-                      <p className="font-bold text-slate-200 mt-0.5">{selectedAsset.lugar_nombre || "No especificado"}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <h4 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-2">Historial de Notarización</h4>
 
               <div className="relative border-l border-white/10 ml-4 pl-6 space-y-6">
@@ -726,6 +698,85 @@ export default function Activos() {
               >
                 Cerrar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE DETALLE DEL ACTIVO (PREMIUM DESIGN) */}
+      {detailAsset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
+          <div className="relative w-full max-w-lg bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/10 text-slate-100 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-5 bg-gradient-to-r from-slate-950 to-indigo-950/80 text-white flex items-center justify-between border-b border-white/5">
+              <div>
+                <h3 className="font-bold text-lg text-slate-100">Detalles del Activo</h3>
+                <p className="text-xs text-slate-400 mt-1">Código: <span className="text-indigo-300 font-mono">{detailAsset.codigo}</span></p>
+              </div>
+              <button
+                onClick={() => setDetailAsset(null)}
+                className="p-1.5 rounded-full bg-white/5 text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <FiX size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Imagen Grande */}
+              <div className="flex items-center justify-center bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5 h-64 w-full shadow-inner relative group">
+                {detailAsset.urlImagen ? (
+                  <img
+                    src={detailAsset.urlImagen}
+                    alt={detailAsset.nombre}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center text-slate-500">
+                    <FiImage size={48} className="text-slate-500 mb-2" />
+                    <span className="text-sm font-medium">Sin imagen registrada</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Atributos */}
+              <div className="grid grid-cols-2 gap-4 text-sm bg-slate-950/30 p-5 rounded-2xl border border-white/5">
+                <div className="col-span-2 pb-2 border-b border-white/5">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nombre del Activo</span>
+                  <p className="font-bold text-slate-200 text-base mt-0.5">{detailAsset.nombre}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Categoría / Tipo</span>
+                  <p className="font-bold text-slate-200 mt-0.5">{detailAsset.tipo_nombre || "No especificado"}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fabricante / Marca</span>
+                  <p className="font-bold text-slate-200 mt-0.5">{detailAsset.marca_nombre || "No especificado"}</p>
+                </div>
+                <div className="col-span-2 pt-2 border-t border-white/5">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ubicación Actual</span>
+                  <p className="font-bold text-slate-200 mt-0.5">{detailAsset.lugar_nombre || "No especificado"}</p>
+                </div>
+                <div className="pt-2 border-t border-white/5">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fecha Registro</span>
+                  <p className="font-mono text-slate-300 mt-0.5">{detailAsset.fecha_registro}</p>
+                </div>
+                <div className="pt-2 border-t border-white/5 font-semibold">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Disponibilidad</span>
+                  <p className={`mt-0.5 ${detailAsset.estado ? "text-emerald-400" : "text-rose-400"}`}>
+                    {detailAsset.estado ? "DISPONIBLE" : "DADO DE BAJA"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setDetailAsset(null)}
+                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-semibold transition-colors border border-white/10 cursor-pointer"
+                >
+                  Cerrar Detalles
+                </button>
+              </div>
             </div>
           </div>
         </div>
