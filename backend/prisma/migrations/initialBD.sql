@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS usuario (
 CREATE TABLE IF NOT EXISTS marca (
     id          INT PRIMARY KEY,
     nombre      VARCHAR(100) NOT NULL,
-    descripcion VARCHAR(255) NOT NULL
+    origen      VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS tipo (
