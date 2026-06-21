@@ -41,7 +41,7 @@ export default function Validador() {
   const [recentContracts, setRecentContracts] = useState<Contract[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
 
-  const GO_SERVICE_URL = "http://localhost:3030";
+  const GO_SERVICE_URL = import.meta.env.VITE_GO_SERVICE_URL || "http://localhost:3030";
 
   // Load recent contracts
   const loadRecent = async () => {
