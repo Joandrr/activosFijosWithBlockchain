@@ -13,4 +13,4 @@ const upload = multer({
 export const uploadRouter = Router();
 
 uploadRouter.post("/", authenticate, upload.single("image"), uploadImage);
-uploadRouter.get("/image/:key*", serveImage);
+uploadRouter.get("/image/*key", serveImage);
