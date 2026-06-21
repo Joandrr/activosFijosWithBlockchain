@@ -142,6 +142,8 @@ export class NotificationService {
       if (adminIds.length > 0) {
         await this.sendToUsers(adminIds, "Nuevo Movimiento de Traslado", adminMsg);
       }
+      // Broadcast to ALL devices/users in OneSignal
+      await this.sendToAll("Nuevo Movimiento de Traslado", adminMsg);
 
       // 2. Notificar a auxiliares (rol_id !== 1) asociados al traslado o lugares de responsabilidad
       const placeIds = [movement.lugar_origen_id, movement.lugar_destino_id].filter(Boolean) as number[];
@@ -204,6 +206,8 @@ export class NotificationService {
       if (adminIds.length > 0) {
         await this.sendToUsers(adminIds, "Firma de Traslado Registrada", adminMsg);
       }
+      // Broadcast to ALL devices/users in OneSignal
+      await this.sendToAll("Firma de Traslado Registrada", adminMsg);
 
       // 2. Notificar a auxiliares (rol_id !== 1) según rol de firma
       const placeIds = [movement.lugar_origen_id, movement.lugar_destino_id].filter(Boolean) as number[];
