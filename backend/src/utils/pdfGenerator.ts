@@ -1,11 +1,48 @@
 import PDFDocument from "pdfkit";
 import type { Response } from "express";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { env } from "../config/env.js";
+
+// Initialize S3 client for PDF image downloads
+const s3 = new S3Client({
+  region: env.AWS_REGION,
+  credentials: {
+    accessKeyId: env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY || "",
+  },
+});
+
+/**
+ * Downloads an image from AWS S3 using its key extracted from URL.
+ */
+async function downloadImageToBuffer(urlImagen?: string | null): Promise<Buffer | null> {
+  if (!urlImagen) return null;
+  try {
+    // Locate the "activos/" key in the URL path (works for S3 direct links and our proxy URLs)
+    const keyIndex = urlImagen.indexOf("activos/");
+    if (keyIndex === -1) return null;
+    const key = urlImagen.substring(keyIndex);
+
+    const command = new GetObjectCommand({
+      Bucket: env.AWS_S3_BUCKET,
+      Key: key,
+    });
+    const response = await s3.send(command);
+    const bytes = await response.Body?.transformToByteArray();
+    if (bytes) {
+      return Buffer.from(bytes);
+    }
+    return null;
+  } catch (error) {
+    console.error("❌ Error descargando imagen de S3 para el PDF:", error);
+    return null;
+  }
+}
 
 /**
  * Draws a clean header block with UAGRM / FICCT branding.
  */
 function drawHeader(doc: PDFKit.PDFDocument, title: string) {
-  // Primary color accent: Dark Slate / Indigo
   doc.rect(50, 45, 495, 3).fill("#1E3A8A");
 
   doc.fillColor("#1E293B")
@@ -39,16 +76,16 @@ function drawFooter(doc: PDFKit.PDFDocument, pageNum: number = 1) {
 }
 
 /**
- * Draws a key-value grid for metadata block.
+ * Draws a key-value grid for metadata block. Supports custom width.
  */
-function drawMetadataBlock(doc: PDFKit.PDFDocument, y: number, data: { label: string; value: string }[]) {
+function drawMetadataBlock(doc: PDFKit.PDFDocument, y: number, data: { label: string; value: string }[], width: number = 495) {
   let currentY = y;
   doc.font("Helvetica");
 
   data.forEach((item, index) => {
     // Alternate background row colors
     if (index % 2 === 0) {
-      doc.rect(50, currentY - 2, 495, 16).fill("#F8FAFC");
+      doc.rect(50, currentY - 2, width, 16).fill("#F8FAFC");
     }
 
     doc.fillColor("#475569")
@@ -59,7 +96,7 @@ function drawMetadataBlock(doc: PDFKit.PDFDocument, y: number, data: { label: st
     doc.fillColor("#0F172A")
        .font("Helvetica")
        .fontSize(9)
-       .text(item.value, 180, currentY, { width: 350 });
+       .text(item.value, 180, currentY, { width: width - 140 });
 
     currentY += 16;
   });
@@ -70,7 +107,7 @@ function drawMetadataBlock(doc: PDFKit.PDFDocument, y: number, data: { label: st
 /**
  * Generates detailed PDF for a single Asset.
  */
-export function generateAssetCertificate(res: Response, asset: any, movements: any[]) {
+export async function generateAssetCertificate(res: Response, asset: any, movements: any[]) {
   const doc = new PDFDocument({ margin: 50, size: "A4" });
   doc.pipe(res);
 
@@ -91,7 +128,35 @@ export function generateAssetCertificate(res: Response, asset: any, movements: a
     { label: "Estado del Activo:", value: asset.estado ? "DISPONIBLE / ACTIVO" : "DADO DE BAJA" }
   ];
 
-  let y = drawMetadataBlock(doc, 150, basicData);
+  // Try downloading the asset image from S3
+  const imageBuffer = await downloadImageToBuffer(asset.urlImagen);
+
+  let y = 150;
+  if (imageBuffer) {
+    // If image exists, draw metadata block with smaller width and render image on the right
+    y = drawMetadataBlock(doc, 150, basicData, 330);
+    
+    // Draw image card on the right
+    doc.rect(395, 148, 150, 130).fill("#F8FAFC");
+    doc.rect(395, 148, 150, 130).stroke("#E2E8F0");
+    try {
+      doc.image(imageBuffer, 400, 153, {
+        width: 140,
+        height: 120,
+        fit: [140, 120],
+        align: "center",
+        valign: "center"
+      });
+    } catch (err) {
+      console.error("Error rendering image in pdf:", err);
+    }
+    // Make sure y is at least below the image card
+    if (y < 288) y = 288;
+  } else {
+    // If no image, draw full-width metadata block
+    y = drawMetadataBlock(doc, 150, basicData, 495);
+  }
+
   y += 20;
 
   // Blockchain Notary Info
@@ -105,7 +170,7 @@ export function generateAssetCertificate(res: Response, asset: any, movements: a
     { label: "Firma Digital Baja:", value: asset.firma_baja || "ACTIVO DISPONIBLE" }
   ];
 
-  y = drawMetadataBlock(doc, y, cryptoData);
+  y = drawMetadataBlock(doc, y, cryptoData, 495);
   y += 25;
 
   // Transfer History
@@ -218,7 +283,7 @@ export function generateAssetSummary(res: Response, assets: any[], filters: any)
 /**
  * Generates detailed PDF contract for a single Movement.
  */
-export function generateMovementCertificate(res: Response, movement: any) {
+export async function generateMovementCertificate(res: Response, movement: any) {
   const doc = new PDFDocument({ margin: 50, size: "A4" });
   doc.pipe(res);
 
@@ -237,7 +302,32 @@ export function generateMovementCertificate(res: Response, movement: any) {
     { label: "Estado del Proceso:", value: movement.estado_movimiento?.nombre || "N/A" }
   ];
 
-  let y = drawMetadataBlock(doc, 150, transferData);
+  // Try downloading the asset image from S3 for this movement
+  const imageBuffer = await downloadImageToBuffer(movement.activo?.urlImagen);
+
+  let y = 150;
+  if (imageBuffer) {
+    y = drawMetadataBlock(doc, 150, transferData, 330);
+    
+    // Draw image card on the right
+    doc.rect(395, 148, 150, 130).fill("#F8FAFC");
+    doc.rect(395, 148, 150, 130).stroke("#E2E8F0");
+    try {
+      doc.image(imageBuffer, 400, 153, {
+        width: 140,
+        height: 120,
+        fit: [140, 120],
+        align: "center",
+        valign: "center"
+      });
+    } catch (err) {
+      console.error("Error rendering asset image in movement pdf:", err);
+    }
+    if (y < 288) y = 288;
+  } else {
+    y = drawMetadataBlock(doc, 150, transferData, 495);
+  }
+
   y += 20;
 
   // Blockchain Notary Info
@@ -251,7 +341,7 @@ export function generateMovementCertificate(res: Response, movement: any) {
     { label: "Firma Digital Receptor:", value: movement.firma_receptor || "PENDIENTE DE FIRMA" }
   ];
 
-  y = drawMetadataBlock(doc, y, cryptoData);
+  y = drawMetadataBlock(doc, y, cryptoData, 495);
   y += 35;
 
   // Signatures display boxes
@@ -272,7 +362,6 @@ export function generateMovementCertificate(res: Response, movement: any) {
   doc.rect(310, y, 235, 90).stroke("#CBD5E1");
   doc.fillColor("#1E293B").font("Helvetica-Bold").fontSize(9).text("AUXILIAR / RECEPTOR", 320, y + 10);
   doc.font("Helvetica").fontSize(8).fillColor("#475569");
-  // Find who receptor is: either get user relation or show pending
   doc.text(`Estado de Firma:`, 320, y + 26);
   doc.text(movement.firma_receptor ? "FIRMADO Y CONFIRMADO" : "PENDIENTE DE CONFIRMACIÓN", 320, y + 38, { width: 215 });
   doc.text(`Firma digital:`, 320, y + 54);

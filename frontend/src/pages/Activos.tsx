@@ -538,6 +538,41 @@ export default function Activos() {
 
             {/* Modal Body / Timeline */}
             <div className="p-6 max-h-[60vh] overflow-y-auto space-y-6">
+              {/* FICHA TÉCNICA DEL ACTIVO CON IMAGEN DE S3 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-950/40 p-5 rounded-2xl border border-white/5">
+                <div className="md:col-span-1 flex items-center justify-center bg-slate-900 rounded-xl overflow-hidden border border-white/10 h-32 w-full">
+                  {selectedAsset.urlImagen ? (
+                    <img
+                      src={selectedAsset.urlImagen}
+                      alt={selectedAsset.nombre}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center text-slate-500">
+                      <FiImage size={32} />
+                      <span className="text-[10px] mt-1">Sin imagen</span>
+                    </div>
+                  )}
+                </div>
+                <div className="md:col-span-2 space-y-2 text-xs">
+                  <h4 className="font-bold text-slate-200 uppercase tracking-wider text-sm">Ficha Técnica</h4>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div>
+                      <span className="text-slate-450">Categoría / Tipo</span>
+                      <p className="font-bold text-slate-200 mt-0.5">{selectedAsset.tipo_nombre || "No especificado"}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-450">Marca</span>
+                      <p className="font-bold text-slate-200 mt-0.5">{selectedAsset.marca_nombre || "No especificado"}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-slate-450">Ubicación Actual</span>
+                      <p className="font-bold text-slate-200 mt-0.5">{selectedAsset.lugar_nombre || "No especificado"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <h4 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-2">Historial de Notarización</h4>
 
               <div className="relative border-l border-white/10 ml-4 pl-6 space-y-6">

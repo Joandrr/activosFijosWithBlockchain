@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "../config/env.js";
 import type { Request, Response } from "express";
 
@@ -37,8 +37,10 @@ export async function uploadImage(req: Request, res: Response): Promise<void> {
 
     await s3.send(new PutObjectCommand(uploadParams));
 
-    // Construct the public S3 URL
-    const fileUrl = `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${fileName}`;
+    // Construct the backend proxy URL (supports x-forwarded headers for reverse proxies/Azure)
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+    const host = req.headers["x-forwarded-host"] || req.get("host");
+    const fileUrl = `${protocol}://${host}/api/upload/image/${fileName}`;
 
     res.status(200).json({
       success: true,
@@ -49,5 +51,52 @@ export async function uploadImage(req: Request, res: Response): Promise<void> {
   } catch (error) {
     console.error("❌ Error al subir imagen a S3:", error);
     res.status(500).json({ error: "Error interno al subir la imagen a AWS S3." });
+  }
+}
+
+export async function serveImage(req: Request, res: Response): Promise<void> {
+  try {
+    // Express wildcard (*) puts the rest of the path under req.params[0]
+    const key = req.params[0];
+    if (!key) {
+      res.status(400).json({ error: "Falta especificar la clave de la imagen." });
+      return;
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: env.AWS_S3_BUCKET,
+      Key: key,
+    });
+
+    const response = await s3.send(command);
+
+    if (response.ContentType) {
+      res.setHeader("Content-Type", response.ContentType);
+    }
+    if (response.ContentLength) {
+      res.setHeader("Content-Length", response.ContentLength);
+    }
+
+    // Set cache control for performance
+    res.setHeader("Cache-Control", "public, max-age=31536000");
+
+    const stream = response.Body as any;
+    if (stream && typeof stream.pipe === "function") {
+      stream.pipe(res);
+    } else {
+      const bytes = await response.Body?.transformToByteArray();
+      if (bytes) {
+        res.send(Buffer.from(bytes));
+      } else {
+        res.status(404).json({ error: "No se pudo leer el archivo de S3." });
+      }
+    }
+  } catch (error: any) {
+    console.error("❌ Error al servir imagen desde S3:", error);
+    if (error.name === "NoSuchKey") {
+      res.status(404).json({ error: "La imagen solicitada no existe." });
+    } else {
+      res.status(500).json({ error: "Error al recuperar la imagen desde AWS S3." });
+    }
   }
 }

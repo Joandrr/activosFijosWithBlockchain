@@ -203,7 +203,7 @@ export async function getIndividualReport(req: Request, res: Response): Promise<
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=activo-${asset.codigo}.pdf`);
 
-    generateAssetCertificate(res, asset, formattedMovements);
+    await generateAssetCertificate(res, asset, formattedMovements);
 
     const authReq = req as AuthRequest;
     if (authReq.user?.sub) {

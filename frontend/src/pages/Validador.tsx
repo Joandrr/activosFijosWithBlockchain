@@ -252,7 +252,7 @@ export default function Validador() {
                     <div className="space-y-0.5 text-xs">
                       <p className="font-bold text-slate-200">{sig.signer_type}</p>
                       <p className="text-slate-400 text-[10px]">Rol verificado y sellado</p>
-                      <p className="font-mono text-[9px] text-indigo-400 break-all">{sig.document_hash.substring(0, 24)}...</p>
+                      <p className="font-mono text-[9px] text-indigo-400 break-all">{sig.document_hash ? `${sig.document_hash.substring(0, 24)}...` : "Sin Hash"}</p>
                       {sig.signature_url && (sig.signature_url.startsWith("http://") || sig.signature_url.startsWith("https://")) && (
                         <div className="mt-1">
                           <a

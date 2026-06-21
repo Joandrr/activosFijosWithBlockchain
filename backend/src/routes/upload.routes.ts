@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import { uploadImage } from "../controllers/upload.controller.js";
+import { uploadImage, serveImage } from "../controllers/upload.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 
 const upload = multer({
@@ -13,3 +13,4 @@ const upload = multer({
 export const uploadRouter = Router();
 
 uploadRouter.post("/", authenticate, upload.single("image"), uploadImage);
+uploadRouter.get("/image/*", serveImage);

@@ -351,7 +351,7 @@ export async function getIndividualReport(req: Request, res: Response): Promise<
       estado_movimiento: movement.estadoMovimiento
     };
 
-    generateMovementCertificate(res, formattedMovement);
+    await generateMovementCertificate(res, formattedMovement);
 
     const authReq = req as AuthRequest;
     if (authReq.user?.sub) {
