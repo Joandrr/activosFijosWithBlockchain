@@ -15,6 +15,8 @@ import { AxiosError } from "axios";
 import { FiX, FiShield, FiGrid, FiClock, FiCheckCircle, FiMapPin, FiInfo, FiPlus, FiTag, FiCalendar, FiFileText, FiUser, FiSettings, FiAlertCircle } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 interface SelectOption {
   value: number;
   label: string;
@@ -91,7 +93,7 @@ export default function Movimientos() {
   useEffect(() => {
     if (!token) return;
 
-    const sse = new EventSource(`http://localhost:3000/api/realtime/stream?token=${token}`);
+    const sse = new EventSource(`${API_URL}/api/realtime/stream?token=${token}`);
     
     sse.addEventListener("movimiento_cambiado", () => {
       console.log("[SSE] Movimiento cambiado recibido. Recargando...");
@@ -119,7 +121,7 @@ export default function Movimientos() {
     if (filterEstado) params.append("estado_id", filterEstado);
     params.append("token", token || "");
 
-    window.open(`http://localhost:3000/api/movimientos/reporte?${params.toString()}&_cb=${Date.now()}`, "_blank");
+    window.open(`${API_URL}/api/movimientos/reporte?${params.toString()}&_cb=${Date.now()}`, "_blank");
   };
 
   const handleDelete = async (id: number | string) => {
@@ -461,7 +463,7 @@ export default function Movimientos() {
                   )}
                   {item.contrato_uuid && (
                     <button
-                      onClick={() => window.open(`http://localhost:3000/api/movimientos/${item.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
+                      onClick={() => window.open(`${API_URL}/api/movimientos/${item.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
                       className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-500/20 transition-all cursor-pointer"
                     >
                       Contrato PDF
@@ -840,7 +842,7 @@ export default function Movimientos() {
 
               <div className="flex gap-3 w-full">
                 <button
-                  onClick={() => window.open(`http://localhost:3000/api/movimientos/${selectedMov.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
+                  onClick={() => window.open(`${API_URL}/api/movimientos/${selectedMov.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
                   className="flex-1 py-2.5 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-400 rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
                   Descargar Contrato PDF

@@ -7,6 +7,8 @@ import { AxiosError } from "axios";
 import { FiX, FiActivity, FiShield, FiUser, FiCalendar, FiClock, FiAlertCircle, FiPlus, FiTag, FiImage, FiSettings, FiGlobe, FiMapPin } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 interface SelectOption {
   value: number;
   label: string;
@@ -76,7 +78,7 @@ export default function Activos() {
   useEffect(() => {
     if (!token) return;
 
-    const sse = new EventSource(`http://localhost:3000/api/realtime/stream?token=${token}`);
+    const sse = new EventSource(`${API_URL}/api/realtime/stream?token=${token}`);
     
     sse.addEventListener("activo_cambiado", () => {
       console.log("[SSE] Activo cambiado recibido. Recargando listado...");
@@ -105,7 +107,7 @@ export default function Activos() {
     if (filterFechaFin) params.append("fecha_fin", filterFechaFin);
     params.append("token", token || "");
 
-    window.open(`http://localhost:3000/api/activos/reporte?${params.toString()}&_cb=${Date.now()}`, "_blank");
+    window.open(`${API_URL}/api/activos/reporte?${params.toString()}&_cb=${Date.now()}`, "_blank");
   };
 
   const handleDelete = async (id: number | string) => {
@@ -305,7 +307,7 @@ export default function Activos() {
                   <FiActivity size={12} /> Ver Ciclo
                 </button>
                 <button
-                  onClick={() => window.open(`http://localhost:3000/api/activos/${item.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
+                  onClick={() => window.open(`${API_URL}/api/activos/${item.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
                 >
                   Ficha PDF
@@ -626,7 +628,7 @@ export default function Activos() {
             {/* Modal Footer */}
             <div className="px-6 py-4 bg-slate-950/30 border-t border-white/5 flex justify-between items-center">
               <button
-                onClick={() => window.open(`http://localhost:3000/api/activos/${selectedAsset.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
+                onClick={() => window.open(`${API_URL}/api/activos/${selectedAsset.id}/reporte?token=${token}&_cb=${Date.now()}`, "_blank")}
                 className="px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 rounded-xl text-sm font-semibold text-indigo-400 transition-colors shadow-sm cursor-pointer"
               >
                 Descargar Ficha PDF
