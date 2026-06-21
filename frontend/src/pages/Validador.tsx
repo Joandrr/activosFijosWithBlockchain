@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { FiSearch, FiShield, FiCheckCircle, FiClock, FiFileText, FiUser, FiActivity } from "react-icons/fi";
 import { useSearchParams } from "react-router-dom";
-import axios from "axios";
+import api from "../services/api";
 
 interface Contract {
   id: string;
@@ -41,13 +41,11 @@ export default function Validador() {
   const [recentContracts, setRecentContracts] = useState<Contract[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
 
-  const GO_SERVICE_URL = import.meta.env.VITE_GO_SERVICE_URL || "http://localhost:3030";
-
   // Load recent contracts
   const loadRecent = async () => {
     setLoadingRecent(true);
     try {
-      const res = await axios.get<Contract[]>(`${GO_SERVICE_URL}/contracts`);
+      const res = await api.get<Contract[]>("/blockchain/contracts");
       setRecentContracts(res.data.reverse().slice(0, 5)); // Latest 5 contracts
     } catch (err) {
       console.error("Error fetching recent contracts:", err);
@@ -66,12 +64,12 @@ export default function Validador() {
 
     try {
       // Fetch Contract Details
-      const resContract = await axios.get<Contract>(`${GO_SERVICE_URL}/contracts/${id}`);
+      const resContract = await api.get<Contract>(`/blockchain/contracts/${id}`);
       setContract(resContract.data);
 
       // Fetch Verification Status
       try {
-        const resVerify = await axios.get<{ valid: boolean; error?: string }>(`${GO_SERVICE_URL}/contracts/${id}/verify`);
+        const resVerify = await api.get<{ valid: boolean; error?: string }>(`/blockchain/contracts/${id}/verify`);
         setVerification({
           valid: resVerify.data.valid,
           message: resVerify.data.valid ? "Sello y hash criptográfico válidos. Datos íntegros en DynamoDB." : "Firma no válida.",
@@ -86,13 +84,13 @@ export default function Validador() {
 
       // Fetch Signatures
       try {
-        const resSigs = await axios.get<Signature[]>(`${GO_SERVICE_URL}/contracts/${id}/signatures`);
+        const resSigs = await api.get<Signature[]>(`/blockchain/contracts/${id}/signatures`);
         setSignatures(resSigs.data || []);
       } catch {}
 
       // Fetch Audit Logs
       try {
-        const resAudit = await axios.get<AuditLog[]>(`${GO_SERVICE_URL}/contracts/${id}/audit`);
+        const resAudit = await api.get<AuditLog[]>(`/blockchain/contracts/${id}/audit`);
         setAuditLogs(resAudit.data || []);
       } catch {}
 
@@ -111,6 +109,7 @@ export default function Validador() {
       handleVerify(idParam);
     }
   }, [searchParams]);
+
 
   // Helper to decode Base64 payload back to readable JSON string
   const getDecodedPayload = (base64Str?: string) => {

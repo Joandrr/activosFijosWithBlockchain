@@ -16,11 +16,13 @@ import { permisoRouter } from "./permiso.routes.js";
 import { responsableLugarRouter } from "./responsable_lugar.routes.js";
 import { realtimeRouter } from "./realtime.routes.js";
 import { uploadRouter } from "./upload.routes.js";
+import { blockchainRouter } from "./blockchain.routes.js";
 
 export const router = Router();
 
 router.use("/auth", authRouter);
 router.use("/upload", uploadRouter);
+router.use("/blockchain", blockchainRouter);
 router.use("/marcas", marcaRouter);
 router.use("/tipos", tipoRouter);
 router.use("/detalles-tipo", detalleTipoRouter);
